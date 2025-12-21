@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Imapster.ContentViews"
+             x:DataType="local:DataGridView"
+             x:Class="Imapster.ContentViews.DataGridView">
+    <ContentView.Content>
+        <Grid RowDefinitions="auto, auto, *">
+            <!-- buttons -->
+            <HorizontalStackLayout Spacing="8" Margin="8" HorizontalOptions="End">
+                <Button Text="Clear selection" Clicked="OnClearSelectionTapped" />
+                <Button Text="Select all" Clicked="OnSelectAllTapped" />
+                <Button Text="Clear filter" Clicked="OnClearFilterTapped" />
+                <Button Text="Clear sort" Clicked="OnClearSortTapped" />
+            </HorizontalStackLayout>
+
+            <!-- Header Grid -->
+            <Grid x:Name="HeaderGrid" BackgroundColor="#2F333C" Grid.Row="1" />
+
+            <!-- Data Rows -->
+            <ScrollView Grid.Row="2" VerticalScrollBarVisibility="Always" HorizontalScrollBarVisibility="Always" >
+                <CollectionView x:Name="DataCollectionView" ItemsSource="{Binding DisplayedItems}" SelectionMode="None" Background="#2A2B2D"/>
+            </ScrollView>
+        </Grid>
+    </ContentView.Content>
+</ContentView>

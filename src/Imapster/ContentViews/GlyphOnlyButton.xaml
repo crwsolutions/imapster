@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Border xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:cv="clr-namespace:Imapster.ContentViews"
+        x:Class="Imapster.ContentViews.GlyphOnlyButton"
+        x:Name="ThisContentView"
+        x:DataType="cv:GlyphOnlyButton"
+        HeightRequest="44"
+        WidthRequest="44"
+        StrokeShape="RoundRectangle 6,6,6,6"
+        StrokeThickness="2"
+        Stroke="{Binding BorderColor, Source={x:Reference Name=ThisContentView}}"
+        BackgroundColor="{Binding ButtonColor, Source={x:Reference Name=ThisContentView}}">
+    <cv:ImapsterMaterialButton RippleColor="{Binding RippleColor, Source={x:Reference Name=ThisContentView}}"
+                           Command="{Binding Command, Source={x:Reference Name=ThisContentView}}" Clicked="MaterialButton_Clicked" >
+        <Label FontFamily="{Binding FontFamily, Source={x:Reference Name=ThisContentView}}"
+               VerticalTextAlignment="Center" HorizontalOptions="Center"
+               FontAttributes="{Binding FontAttributes, Source={x:Reference Name=ThisContentView}}"
+               FontSize="{Binding FontSize, Source={x:Reference Name=ThisContentView}}"
+               Text="{Binding Glyph, Source={x:Reference Name=ThisContentView}}"
+               TextColor="{Binding TextColor, Source={x:Reference Name=ThisContentView}}" />
+    </cv:ImapsterMaterialButton>
+</Border>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+             xmlns:vm="clr-namespace:Imapster.ViewModels"
+             x:DataType="vm:ImapAccountViewModel"
+             x:TypeArguments="x:Boolean"
+             x:Class="Imapster.Popups.AddAccountPopup"
+             Background="Black" WidthRequest="600">
+    <ScrollView Padding="10">
+        <VerticalStackLayout>
+            <Label Text="Add New Account" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,0,0,20"/>
+            
+            <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto, auto, auto, auto" RowSpacing="10">
+                <Label Text="Name:" Grid.Column="0" Grid.Row="0" VerticalOptions="Center" />
+                <Entry Text="{Binding Name}" Grid.Column="1" Grid.Row="0" />
+                
+                <Label Text="Server:" Grid.Column="0" Grid.Row="1" VerticalOptions="Center" />
+                <Entry Text="{Binding Server}" Grid.Column="1" Grid.Row="1" />
+                
+                <Label Text="Port:" Grid.Column="0" Grid.Row="2" VerticalOptions="Center" />
+                <Entry Text="{Binding Port}" Grid.Column="1" Grid.Row="2" Keyboard="Numeric" />
+                
+                <Label Text="Use SSL:" Grid.Column="0" Grid.Row="3" VerticalOptions="Center" />
+                <Switch IsToggled="{Binding UseSsl}" Grid.Column="1" Grid.Row="3" HorizontalOptions="Start" />
+                
+                <Label Text="Username:" Grid.Column="0" Grid.Row="4" VerticalOptions="Center" />
+                <Entry Text="{Binding Username}" Grid.Column="1" Grid.Row="4" />
+                
+                <Label Text="Password:" Grid.Column="0" Grid.Row="5" VerticalOptions="Center" />
+                <Entry Text="{Binding Password}" Grid.Column="1" Grid.Row="5" IsPassword="True" />
+            </Grid>
+            
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="Save" WidthRequest="150" 
+                        Clicked="OnSaveClicked" 
+                        BackgroundColor="Green" 
+                        TextColor="White" 
+                        Margin="0,0,10,0" />
+                <Button Text="Cancel" WidthRequest="150"
+                        Clicked="OnCancelClicked" 
+                        BackgroundColor="Gray" 
+                        TextColor="White" />
+            </StackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</toolkit:Popup>

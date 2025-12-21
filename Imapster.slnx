@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution items/">
+    <File Path=".continue/rules/net-maui.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="src/Imapster/Imapster.csproj" />
+</Solution>

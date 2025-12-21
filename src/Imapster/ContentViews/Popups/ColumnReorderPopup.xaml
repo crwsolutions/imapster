@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+             x:TypeArguments="x:Object"
+             x:Class="Imapster.ContentViews.Popups.ColumnReorderPopup">
+    <VerticalStackLayout Padding="10" WidthRequest="300">
+        <Label Text="Reorder Columns" 
+               FontSize="18" 
+               FontAttributes="Bold" />
+        
+        <ScrollView>
+            <FlexLayout x:Name="ReorderItemsLayout" 
+                        Direction="Column" 
+                        Wrap="Wrap" />
+        </ScrollView>
+        
+        <Button Text="Close" 
+                Clicked="OnCloseClicked" 
+                BackgroundColor="Gray" 
+                TextColor="White" />
+    </VerticalStackLayout>
+</toolkit:Popup>
