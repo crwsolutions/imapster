@@ -5,20 +5,20 @@ namespace Imapster.ViewModels;
 public partial class FolderViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _id = string.Empty;
+    public partial string Id { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private int _unreadCount;
+    public partial int UnreadCount { get; set; }
 
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     [ObservableProperty]
-    private int _accountId;
+    public partial int AccountId { get; set; }
 
     [ObservableProperty]
-    private bool _isTrash;
+    public partial bool IsTrash { get; set; }
 }

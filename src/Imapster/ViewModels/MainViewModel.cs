@@ -14,20 +14,19 @@ public partial class MainViewModel : BaseViewModel
     private readonly EmailAiService _emailAiService;
 
     [ObservableProperty]
-    private string _statusText = "Not connected";
+    public partial string StatusText { get; set; } = "Not connected";
 
     [ObservableProperty]
-    private string _searchText = string.Empty;
+    public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private FolderViewModel? _selectedFolder;
+    public partial FolderViewModel? SelectedFolder { get; set; }
 
     [ObservableProperty]
-    private bool _isConnected = false;
-
+    public partial bool IsConnected { get; set; } = false;
 
     [ObservableProperty]
-    private int _rowCount = 0;
+    public partial int RowCount { get; set; } = 0;
 
     private bool _isLoading = true;
 
@@ -39,7 +38,7 @@ public partial class MainViewModel : BaseViewModel
     }
 
     [ObservableProperty]
-    private ImapAccountViewModel? _selectedAccount;
+    public partial ImapAccountViewModel? SelectedAccount { get; set; }
 
     partial void OnSelectedAccountChanged(ImapAccountViewModel? value)
     {
@@ -57,7 +56,7 @@ public partial class MainViewModel : BaseViewModel
     public ObservableCollection<FolderViewModel> Folders { get; } = [];
 
     [ObservableProperty]
-    private ObservableCollection<EmailViewModel>? _emails = [];
+    public partial ObservableCollection<EmailViewModel>? Emails { get; set; } = [];
 
     public MainViewModel(IImapSyncService imapSyncService,
                          IFolderRepository folderRepository,

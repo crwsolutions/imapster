@@ -10,53 +10,53 @@ namespace Imapster.ViewModels;
 public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatable<EmailViewModel>
 {
     [ObservableProperty]
-    private uint _id = default!;
+    public partial uint Id { get; set; } = default!;
 
     [ObservableProperty]
-    private string _from = default!;
+    public partial string From { get; set; } = default!;
 
     [ObservableProperty]
-    private string _to = default!;
+    public partial string To { get; set; } = default!;
 
     [ObservableProperty]
-    private DateTime _date = default!;
+    public partial DateTime Date { get; set; } = default!;
 
     [ObservableProperty]
-    private string _subject = default!;
+    public partial string Subject { get; set; } = default!;
 
     [ObservableProperty]
-    private string _body = default!;
+    public partial string Body { get; set; } = default!;
 
     [ObservableProperty]
-    private bool _isRead = default!;
+    public partial bool IsRead { get; set; } = default!;
 
     [ObservableProperty]
-    private string _folderId = default!;
+    public partial string FolderId { get; set; } = default!;
 
     [ObservableProperty]
-    private int _accountId;
+    public partial int AccountId { get; set; }
 
     [ObservableProperty]
-    private bool _hasAttachments;
+    public partial bool HasAttachments { get; set; }
 
     [ObservableProperty]
-    private uint? _size;
+    public partial uint? Size { get; set; }
 
     // AI Properties
     [ObservableProperty]
-    private string? _aiSummary;
+    public partial string? AiSummary { get; set; }
 
     [ObservableProperty]
-    private string? _aiCategory;
+    public partial string? AiCategory { get; set; }
 
     [ObservableProperty]
-    private bool? _aiDelete;
+    public partial bool? AiDelete { get; set; }
 
     [ObservableProperty]
-    private string? _aiDeleteMotivation;
+    public partial string? AiDeleteMotivation { get; set; }
 
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     public EmailViewModel()
     {

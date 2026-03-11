@@ -18,6 +18,9 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
+		<!-- For: MVVMTK0041 -->
+		<LangVersion>preview</LangVersion>
+
 		<NoWarn>1701;1702;MVVMTK0045</NoWarn>
 
 		<!-- For: XAML Source generator -->

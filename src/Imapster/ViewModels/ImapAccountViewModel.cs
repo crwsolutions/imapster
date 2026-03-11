@@ -6,23 +6,23 @@ namespace Imapster.ViewModels;
 public partial class ImapAccountViewModel : BaseViewModel
 {
     [ObservableProperty]
-    private int _id;
+    public partial int Id { get; set; }
 
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _server = string.Empty;
+    public partial string Server { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private int _port;
+    public partial int Port { get; set; }
 
     [ObservableProperty]
-    private bool _useSsl;
+    public partial bool UseSsl { get; set; }
 
     [ObservableProperty]
-    private string _username = string.Empty;
+    public partial string Username { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _password = string.Empty;
+    public partial string Password { get; set; } = string.Empty;
 }
