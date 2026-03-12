@@ -244,6 +244,84 @@ var result = await this.ShowPopupAsync<NamePopup>();
 await ClosePopupAsync();
 ```
 
+**Passing data to popup via IQueryAttributable:**
+
+```csharp
+// ViewModel - implement IQueryAttributable and use [RelayCommand] for loading
+public partial class MyPopupViewModel : ObservableObject, IQueryAttributable
+{
+    [ObservableProperty]
+    public partial ObservableCollection<FolderViewModel> AvailableFolders { get; set; } = [];
+
+    private IFolderRepository? _folderRepository;
+    private int _accountId;
+    private string _sourceFolderId = string.Empty;
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("folderRepository", out var repoObj) && repoObj is IFolderRepository folderRepository)
+        {
+            _folderRepository = folderRepository;
+        }
+        
+        if (query.TryGetValue("accountId", out var accountIdObj) && accountIdObj is int accountId)
+        {
+            _accountId = accountId;
+        }
+        
+        if (query.TryGetValue("sourceFolderId", out var sourceFolderIdObj) && sourceFolderIdObj is string sourceFolderId)
+        {
+            _sourceFolderId = sourceFolderId;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadFoldersAsync()
+    {
+        if (_folderRepository == null) return;
+        
+        var folders = await _folderRepository.GetAllFoldersAsync(_accountId);
+        
+        foreach (var folder in folders)
+        {
+            if (folder.Id != _sourceFolderId && !folder.IsTrash)
+            {
+                AvailableFolders.Add(folder);
+            }
+        }
+    }
+}
+
+// Code-behind - parameterless constructor, trigger Load from Loaded event
+public partial class MyPopup : Popup<string>
+{
+    public MyPopup()
+    {
+        InitializeComponent();
+        this.Loaded += HandlePopupOpened;
+    }
+
+    private async void HandlePopupOpened(object? sender, EventArgs e)
+    {
+        if (BindingContext is MyPopupViewModel viewModel)
+        {
+            await viewModel.LoadFoldersCommand.Execute(null);
+        }
+    }
+}
+
+// MainViewModel - pass parameters via dictionary
+var parameters = new Dictionary<string, object>
+{
+    { "folderRepository", _folderRepository },
+    { "accountId", SelectedAccount.Id },
+    { "sourceFolderId", SelectedFolder.Id }
+};
+
+var popup = new MoveFolderPopup();
+var result = await Shell.Current.ShowPopupAsync(popup, parameters);
+```
+
 ## Additional Notes
 - This application is primarily a desktop email management tool
 - Platform-specific code should use conditional compilation or platform handlers
