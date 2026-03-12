@@ -207,6 +207,43 @@ src/Imapster/
 - All database operations must be async
 - Use transactions for bulk operations
 
+### Popups
+
+Docs: https://learn.microsoft.com/en-us/dotnet/communitytoolkit/maui/views/popup
+
+**Use CommunityToolkit Popups**
+
+Allowed APIs:
+
+* `Popup` / `Popup<T>`
+* `ShowPopupAsync(...)`
+* `ClosePopupAsync()`
+* `builder.Services.AddTransientPopup<TPopup, TViewModel>()`
+
+Never use: `ShowPopup()` (non-async), `popup.Close()`, modal `ContentPage`, third-party popup libs.
+
+**Showing a popup (anywhere, incl. Shell):**
+
+```csharp
+await this.ShowPopupAsync<NamePopup>();        // from a Page
+await Shell.Current.ShowPopupAsync<NamePopup>(); // from Shell
+```
+
+**XAML popup / MVVM:**
+
+```csharp
+public partial class NamePopup : Popup<bool>
+
+<toolkit:Popup
+    x:TypeArguments="system:Boolean"
+    x:DataType="vm:NamePopupViewModel">
+
+builder.Services.AddTransientPopup<NamePopup, NamePopupViewModel>();
+
+var result = await this.ShowPopupAsync<NamePopup>();
+await ClosePopupAsync();
+```
+
 ## Additional Notes
 - This application is primarily a desktop email management tool
 - Platform-specific code should use conditional compilation or platform handlers
