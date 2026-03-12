@@ -44,7 +44,8 @@ namespace Imapster
             builder.Logging.AddDebug();
 #endif
 
-            builder.Services.AddTransientPopup<MoveFolderPopup, MoveFolderPopupViewModel>();
+            builder.Services.AddSingleton<IPromptRepository, PromptRepository>();
+            builder.Services.AddTransientPopup<PromptEditorPopup, PromptEditorPopupViewModel>();
 
             var app = builder.Build();
             Database.Initialize();

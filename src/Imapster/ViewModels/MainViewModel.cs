@@ -13,6 +13,7 @@ public partial class MainViewModel : BaseViewModel
     private readonly IEmailRepository _emailRepository;
     private readonly IAccountRepository _accountRepository;
     private readonly EmailAiService _emailAiService;
+    private readonly IPromptRepository _promptRepository;
     private readonly IPopupService _popupService;
 
     [ObservableProperty]
@@ -61,17 +62,19 @@ public partial class MainViewModel : BaseViewModel
     public partial ObservableCollection<EmailViewModel>? Emails { get; set; } = [];
 
     public MainViewModel(IImapSyncService imapSyncService,
-                         IFolderRepository folderRepository,
-                         IEmailRepository emailRepository,
-                         IAccountRepository accountRepository,
-                         EmailAiService emailAiService,
-                         IPopupService popupService)
+                          IFolderRepository folderRepository,
+                          IEmailRepository emailRepository,
+                          IAccountRepository accountRepository,
+                          EmailAiService emailAiService,
+                          IPromptRepository promptRepository,
+                          IPopupService popupService)
     {
         _imapSyncService = imapSyncService;
         _folderRepository = folderRepository;
         _emailRepository = emailRepository;
         _accountRepository = accountRepository;
         _emailAiService = emailAiService;
+        _promptRepository = promptRepository;
         _popupService = popupService;
 
         Title = "IMAP Client";
@@ -384,6 +387,18 @@ public partial class MainViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task EditPrompt()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "promptRepository", _promptRepository }
+        };
+
+        var popup = new PromptEditorPopup();
+        await Shell.Current.ShowPopupAsync(popup, parameters);
     }
 
     [RelayCommand]

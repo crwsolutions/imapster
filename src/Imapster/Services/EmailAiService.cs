@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI;
 using MimeKit;
 
 using System.Text;
@@ -21,65 +21,9 @@ public sealed class EmailAiService
     };
 
     private readonly IChatClient _chatClient;
+    private readonly IPromptRepository? _promptRepository;
 
-    public EmailAiService(IChatClient chatClient)
-    {
-        _chatClient = chatClient;
-    }
-
-    public async Task<EmailClassificationResult> ClassifyEmailAsync(MimeMessage message)
-    {
-        List<ChatMessage> chatHistory = [];
-        chatHistory.Add(new(ChatRole.System, _systemPrompt));
-        chatHistory.Add(new(ChatRole.User, GetMessage(message)));
-        var options = new ChatOptions { };
-
-        var bob = new StringBuilder();
-
-        await foreach (var chunk in _chatClient.GetStreamingResponseAsync(chatHistory, options, CancellationToken.None))
-        {
-            if (!string.IsNullOrEmpty(chunk.Text))
-            {
-                bob.Append(chunk.Text);
-            }
-        }
-
-        var s = bob.ToString();
-        var result = JsonSerializer.Deserialize<EmailClassificationResult>(s, _jsonOptions)!;
-        return result;
-    }
-
-    static string GetMessage(MimeMessage message)
-    {
-        return $"""
-                From: {message.From}
-                To: {message.To}
-                Subject: {message.Subject ?? string.Empty}
-                Date: {message.Date:F}
-
-                Body (text preview):
-                {GetBodyPreview(message, 4500)}
-                """;
-    }
-
-    static string GetBodyPreview(MimeMessage message, int length)
-    {
-        var text = message.TextBody;
-
-        if (string.IsNullOrWhiteSpace(text))
-            text = message.HtmlBody;
-
-        if (string.IsNullOrWhiteSpace(text))
-            return "<no body>";
-
-        text = text.Replace("\r", " ").Replace("\n", " ");
-
-        return text.Length > length
-            ? text.Substring(0, length) + "..."
-            : text;
-    }
-
-    const string _systemPrompt =
+    private const string _defaultSystemPrompt =
         """
         Je bent een assistent die helpt bij het opschonen van e-mail.
 
@@ -139,7 +83,79 @@ public sealed class EmailAiService
           "extra": null
         }
 
-        Wees beslissend. Vermijd twijfelwoorden zoals “misschien”.
+        Wees beslissend. Vermijd twijfelwoorden zoals "misschien".
         """;
 
+    public EmailAiService(IChatClient chatClient, IPromptRepository? promptRepository = null)
+    {
+        _chatClient = chatClient;
+        _promptRepository = promptRepository;
+    }
+
+    public async Task<EmailClassificationResult> ClassifyEmailAsync(MimeMessage message)
+    {
+        var systemPrompt = await GetEffectivePromptAsync();
+        
+        List<ChatMessage> chatHistory = [];
+        chatHistory.Add(new(ChatRole.System, systemPrompt));
+        chatHistory.Add(new(ChatRole.User, GetMessage(message)));
+        var options = new ChatOptions { };
+
+        var bob = new StringBuilder();
+
+        await foreach (var chunk in _chatClient.GetStreamingResponseAsync(chatHistory, options, CancellationToken.None))
+        {
+            if (!string.IsNullOrEmpty(chunk.Text))
+            {
+                bob.Append(chunk.Text);
+            }
+        }
+
+        var s = bob.ToString();
+        var result = JsonSerializer.Deserialize<EmailClassificationResult>(s, _jsonOptions)!;
+        return result;
+    }
+
+    private async Task<string> GetEffectivePromptAsync()
+    {
+        if (_promptRepository != null)
+        {
+            var prompt = await _promptRepository.GetActivePromptAsync();
+            if (prompt != null)
+            {
+                return prompt.Prompt;
+            }
+        }
+        return _defaultSystemPrompt;
+    }
+
+    static string GetMessage(MimeMessage message)
+    {
+        return $"""
+                From: {message.From}
+                To: {message.To}
+                Subject: {message.Subject ?? string.Empty}
+                Date: {message.Date:F}
+
+                Body (text preview):
+                {GetBodyPreview(message, 4500)}
+                """;
+    }
+
+    static string GetBodyPreview(MimeMessage message, int length)
+    {
+        var text = message.TextBody;
+
+        if (string.IsNullOrWhiteSpace(text))
+            text = message.HtmlBody;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return "<no body>";
+
+        text = text.Replace("\r", " ").Replace("\n", " ");
+
+        return text.Length > length
+            ? text.Substring(0, length) + "..."
+            : text;
+    }
 }

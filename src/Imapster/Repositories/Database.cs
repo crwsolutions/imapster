@@ -81,10 +81,45 @@ internal static class Database
             );
             """, connection);
         command3.ExecuteNonQuery();
+
+        // Create PromptTemplates table
+        using var command4 = new SqliteCommand(
+            """
+            CREATE TABLE PromptTemplates (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name NVARCHAR(255) NOT NULL,
+            Prompt TEXT NOT NULL,
+            CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            IsActive BOOLEAN NOT NULL DEFAULT 0
+            );
+            """, connection);
+        command4.ExecuteNonQuery();
     }
 
     private static void MigrateDatabase()
     {
         using var connection = new SqliteConnection($"Data Source={DbPath}");
+        connection.Open();
+
+        // Check if PromptTemplates table exists
+        var checkSql = "SELECT name FROM sqlite_master WHERE type='table' AND name='PromptTemplates'";
+        var tableExists = connection.ExecuteScalar<string>(checkSql) != null;
+
+        if (!tableExists)
+        {
+            var createSql = """
+            CREATE TABLE PromptTemplates (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name NVARCHAR(255) NOT NULL,
+                Prompt TEXT NOT NULL,
+                CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                IsActive BOOLEAN NOT NULL DEFAULT 0
+            );
+            """;
+            using var command = new SqliteCommand(createSql, connection);
+            command.ExecuteNonQuery();
+        }
     }
 }
