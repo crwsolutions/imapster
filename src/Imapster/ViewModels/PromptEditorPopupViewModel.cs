@@ -1,21 +1,28 @@
-using Imapster.Models;
 using Imapster.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Imapster.ViewModels;
 
-public partial class PromptEditorPopupViewModel : ObservableObject
+public partial class PromptEditorPopupViewModel : ObservableObject, IPopupResult
 {
     private readonly ILogger<PromptEditorPopupViewModel> _logger;
     private readonly IPromptRepository _promptRepository;
 
     [ObservableProperty]
-    public partial string PromptText { get; set; } = string.Empty;
+    private string _verwijderRegels = DefaultVerwijderRegels;
 
     [ObservableProperty]
-    public partial bool IsBusy { get; set; }
+    private string _behoudenRegels = DefaultBehoudenRegels;
 
     [ObservableProperty]
-    public partial string DefaultPrompt { get; set; } = DefaultSystemPrompt;
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string _staticIntro = StaticIntro;
+
+    [ObservableProperty]
+    private string _staticOutputFormat = StaticOutputFormat;
+
     public object? Result { get; set; }
 
     public PromptEditorPopupViewModel(ILogger<PromptEditorPopupViewModel> logger, IPromptRepository promptRepository)
@@ -25,31 +32,26 @@ public partial class PromptEditorPopupViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoadPromptAsync()
+    private async Task LoadRulesAsync()
     {
         IsBusy = true;
         try
         {
-            if (_promptRepository != null)
+            var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
+            if (verwijderPrompt != null && !string.IsNullOrWhiteSpace(verwijderPrompt.Prompt))
             {
-                var prompt = await _promptRepository.GetActivePromptAsync();
-                if (prompt != null)
-                {
-                    PromptText = prompt.Prompt;
-                }
-                else
-                {
-                    PromptText = DefaultSystemPrompt;
-                }
+                VerwijderRegels = verwijderPrompt.Prompt;
             }
-            else
+
+            var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
+            if (behoudenPrompt != null && !string.IsNullOrWhiteSpace(behoudenPrompt.Prompt))
             {
-                PromptText = DefaultSystemPrompt;
+                BehoudenRegels = behoudenPrompt.Prompt;
             }
         }
         catch (Exception ex)
         {
-            PromptText = DefaultSystemPrompt;
+            _logger.LogError(ex, "Error loading rules");
         }
         finally
         {
@@ -63,27 +65,21 @@ public partial class PromptEditorPopupViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var existingPrompt = await _promptRepository.GetActivePromptAsync();
-            var prompt = new PromptTemplate
+            var verwijderPrompt = new PromptTemplate
             {
-                Name = "Custom Prompt",
-                Prompt = PromptText,
-                IsActive = true
+                Prompt = VerwijderRegels
             };
 
-            if (existingPrompt != null)
+            var behoudenPrompt = new PromptTemplate
             {
-                prompt.Id = existingPrompt.Id;
-                await _promptRepository.UpdatePromptAsync(prompt);
-            }
-            else
-            {
-                await _promptRepository.InsertPromptAsync(prompt);
-            }
+                Prompt = BehoudenRegels
+            };
+
+            await _promptRepository.SaveRulesAsync(verwijderPrompt, behoudenPrompt);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving prompt");
+            _logger.LogError(ex, "Error saving rules");
         }
         finally
         {
@@ -94,10 +90,11 @@ public partial class PromptEditorPopupViewModel : ObservableObject
     [RelayCommand]
     private async Task ResetToDefaultAsync()
     {
-        PromptText = DefaultSystemPrompt;
+        VerwijderRegels = DefaultVerwijderRegels;
+        BehoudenRegels = DefaultBehoudenRegels;
     }
 
-    private const string DefaultSystemPrompt =
+    private const string StaticIntro =
         """
         Je bent een assistent die helpt bij het opschonen van e-mail.
 
@@ -119,18 +116,28 @@ public partial class PromptEditorPopupViewModel : ObservableObject
         3. Geef een **korte motivatie** (1 zin).
 
         ### Beoordelingsregels:
+        """;
 
+    private const string DefaultVerwijderRegels =
+        """
         # **VERWIJDEREN** als het gaat om:
           * reclame, aanbiedingen, nieuwsbrieven
           * tijdgebonden nieuws of aankondigingen
           * marketing, sales, events, reminders zonder blijvende waarde
           * DHL of PostNL Notificaties
           * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
+        """;
 
+    private const string DefaultBehoudenRegels =
+        """
         # **BEHOUDEN** als het gaat om:
           * persoonlijke communicatie
           * werk, afspraken, contracten, facturen, bevestigingen
           * informatie die later nog nuttig kan zijn
+        """;
+
+    private const string StaticOutputFormat =
+        """
 
         ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
 

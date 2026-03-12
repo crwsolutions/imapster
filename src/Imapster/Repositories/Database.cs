@@ -122,5 +122,63 @@ internal static class Database
             using var command = new SqliteCommand(createSql, connection);
             command.ExecuteNonQuery();
         }
+
+        // Migrate from single prompt to two-row structure (VerwijderRegels + BehoudenRegels)
+        var checkMigration = "SELECT COUNT(*) FROM PromptTemplates WHERE Name IN ('VerwijderRegels', 'BehoudenRegels')";
+        var migratedCount = connection.ExecuteScalar<int>(checkMigration);
+
+        if (migratedCount == 0)
+        {
+            // Check if old single-row prompt exists
+            var oldPromptExists = "SELECT COUNT(*) FROM PromptTemplates WHERE Name = 'Custom Prompt'";
+            var oldCount = connection.ExecuteScalar<int>(oldPromptExists);
+
+            if (oldCount > 0)
+            {
+                // Extract old prompt and split into two sections
+                var oldPrompt = connection.ExecuteScalar<string>(
+                    "SELECT Prompt FROM PromptTemplates WHERE Name = 'Custom Prompt' AND IsActive = 1"
+                );
+
+                if (!string.IsNullOrWhiteSpace(oldPrompt))
+                {
+                    var verwijderRules = ExtractSection(oldPrompt, "**VERWIJDEREN** als het gaat om:", "**BEHOUDEN** als het gaat om:");
+                    var behoudenRules = ExtractSection(oldPrompt, "**BEHOUDEN** als het gaat om:", null);
+
+                    // Insert two new rows
+                    connection.Execute(
+                        "INSERT INTO PromptTemplates (Name, Prompt, IsActive) VALUES ('VerwijderRegels', @Verwijder, 0)",
+                        new { Verwijder = verwijderRules }
+                    );
+                    connection.Execute(
+                        "INSERT INTO PromptTemplates (Name, Prompt, IsActive) VALUES ('BehoudenRegels', @Behouden, 0)",
+                        new { Behouden = behoudenRules }
+                    );
+
+                    // Delete old row
+                    connection.Execute("DELETE FROM PromptTemplates WHERE Name = 'Custom Prompt'");
+                }
+            }
+        }
+    }
+
+    private static string ExtractSection(string prompt, string startMarker, string? endMarker)
+    {
+        var startIndex = prompt.IndexOf(startMarker, StringComparison.Ordinal);
+        if (startIndex == -1) return string.Empty;
+
+        startIndex += startMarker.Length;
+        var remaining = prompt.Substring(startIndex);
+
+        if (endMarker != null)
+        {
+            var endIndex = remaining.IndexOf(endMarker, StringComparison.Ordinal);
+            if (endIndex != -1)
+            {
+                return remaining.Substring(0, endIndex).Trim();
+            }
+        }
+
+        return remaining.Trim();
     }
 }

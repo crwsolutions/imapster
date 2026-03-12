@@ -24,7 +24,7 @@ public sealed class EmailAiService
     private readonly IChatClient _chatClient;
     private readonly IPromptRepository _promptRepository;
 
-    private const string _defaultSystemPrompt =
+    private const string _staticIntro =
         """
         Je bent een assistent die helpt bij het opschonen van e-mail.
 
@@ -46,18 +46,28 @@ public sealed class EmailAiService
         3. Geef een **korte motivatie** (1 zin).
 
         ### Beoordelingsregels:
+        """;
 
+    private const string _defaultVerwijderRegels =
+        """
         # **VERWIJDEREN** als het gaat om:
           * reclame, aanbiedingen, nieuwsbrieven
           * tijdgebonden nieuws of aankondigingen
           * marketing, sales, events, reminders zonder blijvende waarde
           * DHL of PostNL Notificaties
           * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
+        """;
 
+    private const string _defaultBehoudenRegels =
+        """
         # **BEHOUDEN** als het gaat om:
           * persoonlijke communicatie
           * werk, afspraken, contracten, facturen, bevestigingen
           * informatie die later nog nuttig kan zijn
+        """;
+
+    private const string _staticOutputFormat =
+        """
 
         ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
 
@@ -119,15 +129,25 @@ public sealed class EmailAiService
 
     private async Task<string> GetEffectivePromptAsync()
     {
+        string verwijderRegels = _defaultVerwijderRegels;
+        string behoudenRegels = _defaultBehoudenRegels;
+
         if (_promptRepository != null)
         {
-            var prompt = await _promptRepository.GetActivePromptAsync();
-            if (prompt != null)
+            var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
+            if (verwijderPrompt != null && !string.IsNullOrWhiteSpace(verwijderPrompt.Prompt))
             {
-                return prompt.Prompt;
+                verwijderRegels = verwijderPrompt.Prompt;
+            }
+
+            var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
+            if (behoudenPrompt != null && !string.IsNullOrWhiteSpace(behoudenPrompt.Prompt))
+            {
+                behoudenRegels = behoudenPrompt.Prompt;
             }
         }
-        return _defaultSystemPrompt;
+
+        return $"{_staticIntro}\n\n{verwijderRegels}\n\n{behoudenRegels}\n\n{_staticOutputFormat}";
     }
 
     static string GetMessage(MimeMessage message)

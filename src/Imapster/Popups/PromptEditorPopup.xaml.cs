@@ -10,6 +10,6 @@ public partial class PromptEditorPopup : Popup
 
         BindingContext = viewModel;
 
-        Opened += async (s, e) => await ((PromptEditorPopupViewModel)BindingContext).LoadPromptCommand.ExecuteAsync(null);
+        Opened += async (s, e) => await ((PromptEditorPopupViewModel)BindingContext).LoadRulesCommand.ExecuteAsync(null);
     }
 }

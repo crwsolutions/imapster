@@ -68,4 +68,65 @@ public partial class PromptRepository : IPromptRepository
         const string sql = "SELECT Id, Name, Prompt, CreatedAt, UpdatedAt, IsActive FROM PromptTemplates ORDER BY UpdatedAt DESC";
         return (await connection.QueryAsync<PromptTemplate>(sql)).ToList();
     }
+
+    public async Task<PromptTemplate?> GetPromptByNameAsync(string name)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        const string sql = "SELECT Id, Name, Prompt, CreatedAt, UpdatedAt FROM PromptTemplates WHERE Name = @Name";
+        var result = await connection.QueryFirstOrDefaultAsync<PromptTemplate>(sql, new { Name = name });
+        return result;
+    }
+
+    public async Task<PromptTemplate?> GetVerwijderRegelsAsync()
+    {
+        return await GetPromptByNameAsync("VerwijderRegels");
+    }
+
+    public async Task<PromptTemplate?> GetBehoudenRegelsAsync()
+    {
+        return await GetPromptByNameAsync("BehoudenRegels");
+    }
+
+    public async Task SaveRulesAsync(PromptTemplate verwijderRegels, PromptTemplate behoudenRegels)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // Ensure both rules exist
+            var existingVerwijder = await GetVerwijderRegelsAsync();
+            if (existingVerwijder == null)
+            {
+                verwijderRegels.Name = "VerwijderRegels";
+                await InsertPromptAsync(verwijderRegels);
+            }
+            else
+            {
+                verwijderRegels.Id = existingVerwijder.Id;
+                await UpdatePromptAsync(verwijderRegels);
+            }
+
+            var existingBehouden = await GetBehoudenRegelsAsync();
+            if (existingBehouden == null)
+            {
+                behoudenRegels.Name = "BehoudenRegels";
+                await InsertPromptAsync(behoudenRegels);
+            }
+            else
+            {
+                behoudenRegels.Id = existingBehouden.Id;
+                await UpdatePromptAsync(behoudenRegels);
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
 }
