@@ -25,6 +25,7 @@
             <Button Text="&#xf01e;" FontFamily="FontAwesomeSolid"  VerticalOptions="Center" Command="{Binding RefreshCommand}" />
             <Button Text="&#xf544;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding AiCommand}" />
             <Button Text="&#xf2ed;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding TrashCommand}" />
+            <Button Text="&#xf56e;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding MoveCommand}" />
             <Entry  Placeholder="Search emails..." Text="{Binding SearchText}" HeightRequest="42" WidthRequest="400" />
         </HorizontalStackLayout>
 

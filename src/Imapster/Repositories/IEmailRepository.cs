@@ -15,4 +15,5 @@ public interface IEmailRepository
     Task BulkInsertEmailsAsync(IEnumerable<EmailViewModel> emails);
     Task BulkDeleteEmailsAsync(int accountId, string folderId, IEnumerable<uint> ids);
     Task BulkDeleteEmailsAsync(int accountId, string folderId);
+    Task BulkMoveEmailsAsync(int accountId, string sourceFolderId, string targetFolderId, IEnumerable<uint> ids);
 }

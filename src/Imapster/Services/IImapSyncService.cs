@@ -7,5 +7,6 @@ public interface IImapSyncService : IDisposable
 
     Task FoldersAsync(CancellationToken cancellationToken = default);
     Task<string> MoveEmailsToTrashAsync(string sourceFolder, List<uint> emailIds);
+    Task<string> MoveEmailsToFolderAsync(string sourceFolderId, string targetFolderId, List<uint> emailIds);
     Task EmptyFolderAsync(int accountId, string folderId);
 }

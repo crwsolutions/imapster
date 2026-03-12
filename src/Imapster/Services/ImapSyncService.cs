@@ -198,6 +198,35 @@ public class ImapSyncService : IImapSyncService
         return $"Moved {emailIds.Count} emails to trash";
     }
 
+    public async Task<string> MoveEmailsToFolderAsync(string sourceFolderId, string targetFolderId, List<uint> emailIds)
+    {
+        if (_imapClient == null || _currentAccount == null)
+        {
+            throw new ApplicationException("IMAP client not connected. Cannot move emails.");
+        }
+
+        if (sourceFolderId == targetFolderId)
+        {
+            throw new ApplicationException("Source and target folders must be different.");
+        }
+
+        var source = GetFolder(sourceFolderId) ?? throw new ApplicationException($"Source folder {sourceFolderId} not found");
+        var target = GetFolder(targetFolderId) ?? throw new ApplicationException($"Target folder {targetFolderId} not found");
+
+        await source.OpenAsync(FolderAccess.ReadWrite);
+
+        // Move emails on the server
+        var uids = emailIds.Select(id => new UniqueId(id)).ToList();
+        await source.MoveToAsync(uids, target);
+
+        await source.CloseAsync();
+
+        // Update local database
+        await _emailRepository.BulkMoveEmailsAsync(_currentAccount.Id, sourceFolderId, targetFolderId, emailIds);
+
+        return $"Moved {emailIds.Count} emails to {target.Name}";
+    }
+
     IMailFolder? GetTrashFolder()
     {
         var personal = _imapClient!.GetFolder(_imapClient.PersonalNamespaces[0]);

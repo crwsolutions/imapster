@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Maui.Extensions;
+﻿using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
 using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
@@ -12,6 +13,7 @@ public partial class MainViewModel : BaseViewModel
     private readonly IEmailRepository _emailRepository;
     private readonly IAccountRepository _accountRepository;
     private readonly EmailAiService _emailAiService;
+    private readonly IPopupService _popupService;
 
     [ObservableProperty]
     public partial string StatusText { get; set; } = "Not connected";
@@ -62,13 +64,15 @@ public partial class MainViewModel : BaseViewModel
                          IFolderRepository folderRepository,
                          IEmailRepository emailRepository,
                          IAccountRepository accountRepository,
-                         EmailAiService emailAiService)
+                         EmailAiService emailAiService,
+                         IPopupService popupService)
     {
         _imapSyncService = imapSyncService;
         _folderRepository = folderRepository;
         _emailRepository = emailRepository;
         _accountRepository = accountRepository;
         _emailAiService = emailAiService;
+        _popupService = popupService;
 
         Title = "IMAP Client";
 
@@ -385,6 +389,12 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task Trash()
     {
+        if (!IsConnected)
+        {
+            StatusText = "Please connect to server first";
+            return;
+        }
+
         if (Emails is null || SelectedFolder == null)
         {
             StatusText = "No emails to trash";
@@ -424,6 +434,75 @@ public partial class MainViewModel : BaseViewModel
         catch (Exception ex)
         {
             StatusText = $"Failed to move emails to trash: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task Move()
+    {
+        if (!IsConnected)
+        {
+            StatusText = "Please connect to server first";
+            return;
+        }
+
+        if (Emails is null || SelectedFolder == null)
+        {
+            StatusText = "No emails to move";
+            return;
+        }
+
+        var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
+        if (!selectedEmails.Any())
+        {
+            StatusText = "No emails selected";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+
+            var parameters = new Dictionary<string, object>
+            {
+                { "folderRepository", _folderRepository },
+                { "accountId", SelectedAccount!.Id },
+                { "sourceFolderId", SelectedFolder.Id }
+            };
+
+            var popupResult = await _popupService.ShowPopupAsync<MoveFolderPopupViewModel>(
+                Shell.Current,
+                options: new PopupOptions { Shape = null, Shadow = null },
+                shellParameters: parameters
+                );
+
+            var pr = popupResult as IPopupResult<string>;
+
+            if (pr?.Result is string result)
+            {
+                var emailIds = selectedEmails.Select(e => e.Id).ToList();
+                var moveResult = await _imapSyncService.MoveEmailsToFolderAsync(SelectedFolder.Id, result, emailIds);
+
+                foreach (var email in selectedEmails.ToList())
+                {
+                    Emails.Remove(email);
+                }
+
+                RowCount = Emails.Count;
+                StatusText = moveResult;
+            }
+            else
+            {
+                StatusText = "Move cancelled";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to move emails: {ex.Message}";
         }
         finally
         {
