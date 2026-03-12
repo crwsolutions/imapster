@@ -118,4 +118,22 @@ public class EmailRepository : IEmailRepository
             "DELETE FROM Emails WHERE AccountId = @AccountId AND FolderId = @FolderId",
             new { AccountId = accountId, FolderId = folderId });
     }
+
+    public async Task BulkMoveEmailsAsync(int accountId, string sourceFolderId, string targetFolderId, IEnumerable<uint> ids)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        using var transaction = connection.BeginTransaction();
+
+        const string sql = "UPDATE Emails SET FolderId = @TargetFolderId WHERE Id = @Id AND AccountId = @AccountId AND FolderId = @SourceFolderId";
+
+        await connection.ExecuteAsync(
+            sql,
+            ids.Select(id => new { Id = id, AccountId = accountId, SourceFolderId = sourceFolderId, TargetFolderId = targetFolderId }),
+            transaction
+        );
+
+        transaction.Commit();
+    }
 }

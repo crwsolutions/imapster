@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+             xmlns:vm="clr-namespace:Imapster.ViewModels"
+             x:DataType="vm:MoveFolderPopupViewModel"
+             x:TypeArguments="x:Boolean"
+             x:Class="Imapster.Popups.MoveFolderPopup"
+             Background="Black" WidthRequest="400">
+    <ScrollView Padding="10">
+        <VerticalStackLayout>
+            <Label Text="Move to Folder" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,0,0,20"/>
+            
+            <CollectionView ItemsSource="{Binding AvailableFolders}"
+                            SelectedItem="{Binding SelectedFolder}"
+                            SelectionMode="Single"
+                            Margin="0,0,0,10">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FolderViewModel">
+                        <HorizontalStackLayout Spacing="12" Padding="12" BackgroundColor="{StaticResource Gray600}" CornerRadius="6">
+                            <Label Text="{Binding Name}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,10,0,0">
+                <Button Text="Move" WidthRequest="150" 
+                        Command="{Binding SaveCommand}" 
+                        BackgroundColor="Green" 
+                        TextColor="White" 
+                        Margin="0,0,10,0" />
+                <Button Text="Cancel" WidthRequest="150"
+                        Command="{Binding CancelCommand}" 
+                        BackgroundColor="Gray" 
+                        TextColor="White" />
+            </StackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</toolkit:Popup>
