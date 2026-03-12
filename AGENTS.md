@@ -232,10 +232,10 @@ await Shell.Current.ShowPopupAsync<NamePopup>(); // from Shell
 **XAML popup / MVVM:**
 
 ```csharp
-public partial class NamePopup : Popup<bool>
+public partial class NamePopup : Popup<string>
 
 <toolkit:Popup
-    x:TypeArguments="system:Boolean"
+    x:TypeArguments="x:String"
     x:DataType="vm:NamePopupViewModel">
 
 builder.Services.AddTransientPopup<NamePopup, NamePopupViewModel>();
@@ -247,7 +247,7 @@ await ClosePopupAsync();
 **Passing data to popup via IQueryAttributable:**
 
 ```csharp
-// ViewModel - implement IQueryAttributable and use [RelayCommand] for loading
+// ViewModel - implement IQueryAttributable with [RelayCommand] for loading
 public partial class MyPopupViewModel : ObservableObject, IQueryAttributable
 {
     [ObservableProperty]
@@ -260,34 +260,23 @@ public partial class MyPopupViewModel : ObservableObject, IQueryAttributable
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("folderRepository", out var repoObj) && repoObj is IFolderRepository folderRepository)
-        {
             _folderRepository = folderRepository;
-        }
         
         if (query.TryGetValue("accountId", out var accountIdObj) && accountIdObj is int accountId)
-        {
             _accountId = accountId;
-        }
-        
+            
         if (query.TryGetValue("sourceFolderId", out var sourceFolderIdObj) && sourceFolderIdObj is string sourceFolderId)
-        {
             _sourceFolderId = sourceFolderId;
-        }
     }
 
     [RelayCommand]
     private async Task LoadFoldersAsync()
     {
-        if (_folderRepository == null) return;
-        
         var folders = await _folderRepository.GetAllFoldersAsync(_accountId);
-        
         foreach (var folder in folders)
         {
             if (folder.Id != _sourceFolderId && !folder.IsTrash)
-            {
                 AvailableFolders.Add(folder);
-            }
         }
     }
 }
@@ -298,15 +287,7 @@ public partial class MyPopup : Popup<string>
     public MyPopup()
     {
         InitializeComponent();
-        this.Loaded += HandlePopupOpened;
-    }
-
-    private async void HandlePopupOpened(object? sender, EventArgs e)
-    {
-        if (BindingContext is MyPopupViewModel viewModel)
-        {
-            await viewModel.LoadFoldersCommand.Execute(null);
-        }
+        this.Loaded += async (s, e) => await ((MyPopupViewModel)BindingContext!).LoadFoldersCommand.Execute(null);
     }
 }
 
@@ -318,7 +299,7 @@ var parameters = new Dictionary<string, object>
     { "sourceFolderId", SelectedFolder.Id }
 };
 
-var popup = new MoveFolderPopup();
+var popup = new MyPopup();
 var result = await Shell.Current.ShowPopupAsync(popup, parameters);
 ```
 
