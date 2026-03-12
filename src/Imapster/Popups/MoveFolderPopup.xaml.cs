@@ -1,32 +1,27 @@
 using CommunityToolkit.Maui.Views;
 using Imapster.Repositories;
-using Imapster.ViewModels;
 
 namespace Imapster.Popups;
 
 public partial class MoveFolderPopup : Popup<string>
 {
-    private readonly IFolderRepository _folderRepository;
-    private readonly int _accountId;
-    private readonly string _sourceFolderId;
     private MoveFolderPopupViewModel _viewModel;
 
     public MoveFolderPopup(IFolderRepository folderRepository, int accountId, string sourceFolderId)
     {
         InitializeComponent();
-        _folderRepository = folderRepository;
-        _accountId = accountId;
-        _sourceFolderId = sourceFolderId;
-        _viewModel = new MoveFolderPopupViewModel(folderRepository, accountId, sourceFolderId);
+        _viewModel = new MoveFolderPopupViewModel();
         BindingContext = _viewModel;
         
         SaveButton.Clicked += SaveButtonClicked;
         CancelButton.Clicked += CancelButtonClicked;
+        
+        this.Loaded += HandlePopupOpened;
     }
 
-    private async void LoadButtonClicked(object? sender, EventArgs e)
+    private async void HandlePopupOpened(object? sender, EventArgs e)
     {
-        await _viewModel.LoadFoldersAsync();
+        await _viewModel.LoadFoldersAsync.Execute((folderRepository, _accountId, _sourceFolderId));
     }
 
     private async void SaveButtonClicked(object? sender, EventArgs e)
@@ -49,5 +44,6 @@ public partial class MoveFolderPopup : Popup<string>
     {
         SaveButton.Clicked -= SaveButtonClicked;
         CancelButton.Clicked -= CancelButtonClicked;
+        this.Loaded -= HandlePopupOpened;
     }
 }
