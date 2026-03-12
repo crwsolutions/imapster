@@ -452,7 +452,6 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
-        // Get selected emails
         var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
         if (!selectedEmails.Any())
         {
@@ -464,30 +463,20 @@ public partial class MainViewModel : BaseViewModel
         {
             IsBusy = true;
 
-            // Show move folder popup
-            var popup = new MoveFolderPopup();
-            var viewModel = new MoveFolderPopupViewModel(SelectedAccount!.Id, SelectedFolder.Id);
-            popup.BindingContext = viewModel;
+            var popup = new MoveFolderPopup(_folderRepository, SelectedAccount!.Id, SelectedFolder.Id);
+            var result = await Shell.Current.ShowPopupAsync<string>(popup);
 
-            var result = await Shell.Current.ShowPopupAsync<bool>(popup);
-
-            if (result.Result is true && viewModel.SelectedFolder != null)
+            if (!string.IsNullOrEmpty(result))
             {
-                // Get email IDs for the selected emails
                 var emailIds = selectedEmails.Select(e => e.Id).ToList();
+                var moveResult = await _imapSyncService.MoveEmailsToFolderAsync(SelectedFolder.Id, result, emailIds);
 
-                // Move emails on server via IMAP service
-                var moveResult = await _imapSyncService.MoveEmailsToFolderAsync(SelectedFolder.Id, viewModel.SelectedFolder.Id, emailIds);
-
-                // Remove from local collection (for fastest UI response)
                 foreach (var email in selectedEmails.ToList())
                 {
                     Emails.Remove(email);
                 }
 
-                // Update row count
                 RowCount = Emails.Count;
-
                 StatusText = moveResult;
             }
             else

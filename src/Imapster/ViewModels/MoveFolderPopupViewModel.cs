@@ -16,15 +16,14 @@ public partial class MoveFolderPopupViewModel : ObservableObject
     [ObservableProperty]
     public partial FolderViewModel? SelectedFolder { get; set; }
 
-    public MoveFolderPopupViewModel(int accountId, string sourceFolderId)
+    public MoveFolderPopupViewModel(IFolderRepository folderRepository, int accountId, string sourceFolderId)
     {
+        _folderRepository = folderRepository;
         _accountId = accountId;
         _sourceFolderId = sourceFolderId;
-        _folderRepository = new FolderRepository();
-        LoadFoldersAsync();
     }
 
-    private async Task LoadFoldersAsync()
+    public async Task LoadFoldersAsync()
     {
         var folders = await _folderRepository.GetAllFoldersAsync(_accountId);
         
@@ -35,26 +34,5 @@ public partial class MoveFolderPopupViewModel : ObservableObject
                 AvailableFolders.Add(folder);
             }
         }
-    }
-
-    [RelayCommand]
-    private async Task Save()
-    {
-        if (SelectedFolder == null)
-        {
-            await MainThread.InvokeOnMainThreadAsync(() => 
-                Application.Current?.Windows[0].Page?.DisplayAlertAsync("Error", "Please select a folder.", "OK"));
-            return;
-        }
-
-        await MainThread.InvokeOnMainThreadAsync(() => 
-            Application.Current?.Windows[0].Page?.ClosePopupAsync(true));
-    }
-
-    [RelayCommand]
-    private async Task Cancel()
-    {
-        await MainThread.InvokeOnMainThreadAsync(() => 
-            Application.Current?.Windows[0].Page?.ClosePopupAsync(false));
     }
 }

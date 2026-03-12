@@ -1,4 +1,6 @@
-﻿using Imapster.Repositories;
+﻿using Imapster.Popups;
+using Imapster.Repositories;
+using Imapster.ViewModels;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
@@ -41,6 +43,10 @@ namespace Imapster
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
+
+            builder.Services
+                .AddTransient<MoveFolderPopupViewModel>()
+                .AddTransient<MoveFolderPopup>();
 
             var app = builder.Build();
             Database.Initialize();
