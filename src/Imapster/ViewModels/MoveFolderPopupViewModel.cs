@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Imapster.Repositories;
 
 namespace Imapster.ViewModels;
@@ -22,12 +20,12 @@ public partial class MoveFolderPopupViewModel : ObservableObject, IQueryAttribut
         {
             _folderRepository = folderRepository;
         }
-        
+
         if (query.TryGetValue("accountId", out var accountIdObj) && accountIdObj is int accountId)
         {
             _accountId = accountId;
         }
-        
+
         if (query.TryGetValue("sourceFolderId", out var sourceFolderIdObj) && sourceFolderIdObj is string sourceFolderId)
         {
             _sourceFolderId = sourceFolderId;
@@ -38,9 +36,9 @@ public partial class MoveFolderPopupViewModel : ObservableObject, IQueryAttribut
     private async Task LoadFoldersAsync()
     {
         if (_folderRepository == null) return;
-        
+
         var folders = await _folderRepository.GetAllFoldersAsync(_accountId);
-        
+
         foreach (var folder in folders)
         {
             if (folder.Id != _sourceFolderId && !folder.IsTrash)

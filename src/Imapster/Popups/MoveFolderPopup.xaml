@@ -17,7 +17,7 @@
                             Margin="0,0,0,10">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:FolderViewModel">
-                        <Border BackgroundColor="{StaticResource Gray600}" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                        <Border BackgroundColor="{StaticResource Gray600}" StrokeShape="RoundRectangle 6,6,6,6" Padding="12" Margin="0,0,0,8">
                             <Label Text="{Binding Name}" VerticalOptions="Center" />
                         </Border>
                     </DataTemplate>
@@ -25,12 +25,12 @@
             </CollectionView>
             
             <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,10,0,0">
-                <Button x:Name="SaveButton" Text="Move" WidthRequest="150" 
-                        BackgroundColor="Green" 
+                <Button Text="Move" WidthRequest="150" 
+                        BackgroundColor="Green" Clicked="SaveButtonClicked"
                         TextColor="White" 
                         Margin="0,0,10,0" />
-                <Button x:Name="CancelButton" Text="Cancel" WidthRequest="150"
-                        BackgroundColor="Gray" 
+                <Button Text="Cancel" WidthRequest="150"
+                        BackgroundColor="Gray" Clicked="CancelButtonClicked"
                         TextColor="White" />
             </StackLayout>
         </VerticalStackLayout>

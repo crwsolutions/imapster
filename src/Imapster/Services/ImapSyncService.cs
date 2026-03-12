@@ -214,17 +214,12 @@ public class ImapSyncService : IImapSyncService
         var target = GetFolder(targetFolderId) ?? throw new ApplicationException($"Target folder {targetFolderId} not found");
 
         await source.OpenAsync(FolderAccess.ReadWrite);
-        await target.OpenAsync(FolderAccess.ReadWrite);
 
         // Move emails on the server
-        foreach (var emailId in emailIds)
-        {
-            var uid = new UniqueId(emailId);
-            await source.MoveToAsync(uid, target);
-        }
+        var uids = emailIds.Select(id => new UniqueId(id)).ToList();
+        await source.MoveToAsync(uids, target);
 
         await source.CloseAsync();
-        await target.CloseAsync();
 
         // Update local database
         await _emailRepository.BulkMoveEmailsAsync(_currentAccount.Id, sourceFolderId, targetFolderId, emailIds);

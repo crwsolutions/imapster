@@ -4,21 +4,20 @@ namespace Imapster.Popups;
 
 public partial class MoveFolderPopup : Popup<string>
 {
-    public MoveFolderPopup()
+    public MoveFolderPopup(MoveFolderPopupViewModel viewModel)
     {
         InitializeComponent();
         
-        SaveButton.Clicked += SaveButtonClicked;
-        CancelButton.Clicked += CancelButtonClicked;
-        
-        this.Loaded += HandlePopupOpened;
+        BindingContext = viewModel;
+
+        Opened += HandlePopupOpened;
     }
 
     private async void HandlePopupOpened(object? sender, EventArgs e)
     {
         if (BindingContext is MoveFolderPopupViewModel viewModel)
         {
-            await viewModel.LoadFoldersCommand.Execute(null);
+            await viewModel.LoadFoldersCommand.ExecuteAsync(null);
         }
     }
 
@@ -26,7 +25,7 @@ public partial class MoveFolderPopup : Popup<string>
     {
         if (BindingContext is MoveFolderPopupViewModel viewModel && viewModel.SelectedFolder == null)
         {
-            await Application.Current?.MainPage?.DisplayAlertAsync("Error", "Please select a folder.", "OK");
+            await Application.Current!.Windows[0]!.Page!.DisplayAlertAsync("Error", "Please select a folder.", "OK");
             return;
         }
 
@@ -38,13 +37,6 @@ public partial class MoveFolderPopup : Popup<string>
 
     private void CancelButtonClicked(object? sender, EventArgs e)
     {
-        CloseAsync(null);
-    }
-
-    protected override void OnClosed(bool value)
-    {
-        SaveButton.Clicked -= SaveButtonClicked;
-        CancelButton.Clicked -= CancelButtonClicked;
-        this.Loaded -= HandlePopupOpened;
+        CloseAsync();
     }
 }
