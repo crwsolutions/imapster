@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace Imapster.Repositories;

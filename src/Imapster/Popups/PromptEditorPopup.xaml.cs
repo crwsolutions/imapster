@@ -1,10 +1,15 @@
+using CommunityToolkit.Maui.Views;
+
 namespace Imapster.Popups;
 
-public partial class PromptEditorPopup : Popup<string>
+public partial class PromptEditorPopup : Popup
 {
-    public PromptEditorPopup()
+    public PromptEditorPopup(PromptEditorPopupViewModel viewModel)
     {
         InitializeComponent();
-        this.Loaded += async (s, e) => await ((PromptEditorPopupViewModel)BindingContext!).LoadPromptCommand.Execute(null);
+
+        BindingContext = viewModel;
+
+        Opened += async (s, e) => await ((PromptEditorPopupViewModel)BindingContext).LoadPromptCommand.ExecuteAsync(null);
     }
 }

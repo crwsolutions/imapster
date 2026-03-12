@@ -1,3 +1,4 @@
+using Imapster.Repositories;
 using Microsoft.Extensions.AI;
 using MimeKit;
 
@@ -21,7 +22,7 @@ public sealed class EmailAiService
     };
 
     private readonly IChatClient _chatClient;
-    private readonly IPromptRepository? _promptRepository;
+    private readonly IPromptRepository _promptRepository;
 
     private const string _defaultSystemPrompt =
         """
@@ -86,7 +87,7 @@ public sealed class EmailAiService
         Wees beslissend. Vermijd twijfelwoorden zoals "misschien".
         """;
 
-    public EmailAiService(IChatClient chatClient, IPromptRepository? promptRepository = null)
+    public EmailAiService(IChatClient chatClient, IPromptRepository promptRepository)
     {
         _chatClient = chatClient;
         _promptRepository = promptRepository;

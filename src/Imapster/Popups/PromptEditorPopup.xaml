@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-               xmlns:toolkit="clr:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
-               xmlns:vm="clr:Imapster.ViewModels"
+               xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+               xmlns:vm="clr-namespace:Imapster.ViewModels"
                x:DataType="vm:PromptEditorPopupViewModel"
                x:Class="Imapster.Popups.PromptEditorPopup"
-               Background="Black" WidthRequest="700">
+               >
     <ScrollView Padding="20" VerticalOptions="Center">
         <VerticalStackLayout Spacing="15" MaximumWidthRequest="800">
             <Label Text="AI Prompt Editor" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
@@ -14,13 +14,9 @@
             
             <Editor Text="{Binding PromptText}"
                     Placeholder="Prompt text..."
-                    Multiline="True"
-                    HorizontalOptions="FillAndExpand"
-                    VerticalOptions="FillAndExpand"
                     HeightRequest="400"
                     FontFamily="Monospace"
                     FontSize="12"
-                    Padding="12"
                     BackgroundColor="{StaticResource Gray700}"
                     TextColor="White"
                     Margin="0,0,0,10" />
@@ -46,13 +42,9 @@
             <Editor Text="{Binding DefaultPrompt, Mode=OneWay}"
                     IsReadOnly="True"
                     IsEnabled="False"
-                    Multiline="True"
-                    HorizontalOptions="FillAndExpand"
-                    VerticalOptions="FillAndExpand"
                     HeightRequest="150"
                     FontFamily="Monospace"
                     FontSize="11"
-                    Padding="12"
                     BackgroundColor="{StaticResource Gray800}"
                     TextColor="Gray"
                     Margin="0,0,0,0" />

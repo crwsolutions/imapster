@@ -1,22 +1,21 @@
+using Imapster.Models;
 using Imapster.Repositories;
-using Microsoft.Extensions.Logging;
 
 namespace Imapster.ViewModels;
 
-public partial class PromptEditorPopupViewModel : ObservableObject, IPopupResult
+public partial class PromptEditorPopupViewModel : ObservableObject
 {
     private readonly ILogger<PromptEditorPopupViewModel> _logger;
     private readonly IPromptRepository _promptRepository;
 
     [ObservableProperty]
-    private string _promptText = string.Empty;
+    public partial string PromptText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
-    private string _defaultPrompt = DefaultSystemPrompt;
-
+    public partial string DefaultPrompt { get; set; } = DefaultSystemPrompt;
     public object? Result { get; set; }
 
     public PromptEditorPopupViewModel(ILogger<PromptEditorPopupViewModel> logger, IPromptRepository promptRepository)
