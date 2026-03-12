@@ -1,17 +1,12 @@
 using CommunityToolkit.Maui.Views;
-using Imapster.Repositories;
 
 namespace Imapster.Popups;
 
 public partial class MoveFolderPopup : Popup<string>
 {
-    private MoveFolderPopupViewModel _viewModel;
-
-    public MoveFolderPopup(IFolderRepository folderRepository, int accountId, string sourceFolderId)
+    public MoveFolderPopup()
     {
         InitializeComponent();
-        _viewModel = new MoveFolderPopupViewModel();
-        BindingContext = _viewModel;
         
         SaveButton.Clicked += SaveButtonClicked;
         CancelButton.Clicked += CancelButtonClicked;
@@ -21,18 +16,24 @@ public partial class MoveFolderPopup : Popup<string>
 
     private async void HandlePopupOpened(object? sender, EventArgs e)
     {
-        await _viewModel.LoadFoldersAsync(folderRepository, _accountId, _sourceFolderId);
+        if (BindingContext is MoveFolderPopupViewModel viewModel)
+        {
+            await viewModel.LoadFoldersCommand.Execute(null);
+        }
     }
 
     private async void SaveButtonClicked(object? sender, EventArgs e)
     {
-        if (_viewModel.SelectedFolder == null)
+        if (BindingContext is MoveFolderPopupViewModel viewModel && viewModel.SelectedFolder == null)
         {
             await Application.Current?.MainPage?.DisplayAlertAsync("Error", "Please select a folder.", "OK");
             return;
         }
 
-        await CloseAsync(_viewModel.SelectedFolder.Id);
+        if (BindingContext is MoveFolderPopupViewModel vm && vm.SelectedFolder != null)
+        {
+            await CloseAsync(vm.SelectedFolder.Id);
+        }
     }
 
     private void CancelButtonClicked(object? sender, EventArgs e)

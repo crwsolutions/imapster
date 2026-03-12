@@ -463,8 +463,15 @@ public partial class MainViewModel : BaseViewModel
         {
             IsBusy = true;
 
-            var popup = new MoveFolderPopup(_folderRepository, SelectedAccount!.Id, SelectedFolder.Id);
-            var result = await Shell.Current.ShowPopupAsync<string>(popup);
+            var parameters = new Dictionary<string, object>
+            {
+                { "folderRepository", _folderRepository },
+                { "accountId", SelectedAccount!.Id },
+                { "sourceFolderId", SelectedFolder.Id }
+            };
+
+            var popup = new MoveFolderPopup();
+            var result = await Shell.Current.ShowPopupAsync(popup, parameters);
 
             if (!string.IsNullOrEmpty(result))
             {
