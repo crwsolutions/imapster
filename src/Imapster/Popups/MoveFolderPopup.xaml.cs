@@ -21,7 +21,7 @@ public partial class MoveFolderPopup : Popup<string>
 
     private async void HandlePopupOpened(object? sender, EventArgs e)
     {
-        await _viewModel.LoadFoldersAsync.Execute((folderRepository, _accountId, _sourceFolderId));
+        await _viewModel.LoadFoldersAsync(folderRepository, _accountId, _sourceFolderId);
     }
 
     private async void SaveButtonClicked(object? sender, EventArgs e)
