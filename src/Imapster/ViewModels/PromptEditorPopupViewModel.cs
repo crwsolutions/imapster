@@ -1,10 +1,12 @@
 using Imapster.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Imapster.ViewModels;
 
-public partial class PromptEditorPopupViewModel : ObservableObject, IQueryAttributable
+public partial class PromptEditorPopupViewModel : ObservableObject, IPopupResult
 {
-    private readonly IPromptRepository? _promptRepository;
+    private readonly ILogger<PromptEditorPopupViewModel> _logger;
+    private readonly IPromptRepository _promptRepository;
 
     [ObservableProperty]
     private string _promptText = string.Empty;
@@ -15,13 +17,12 @@ public partial class PromptEditorPopupViewModel : ObservableObject, IQueryAttrib
     [ObservableProperty]
     private string _defaultPrompt = DefaultSystemPrompt;
 
-    public PromptEditorPopupViewModel(IPromptRepository? promptRepository = null)
-    {
-        _promptRepository = promptRepository;
-    }
+    public object? Result { get; set; }
 
-    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    public PromptEditorPopupViewModel(ILogger<PromptEditorPopupViewModel> logger, IPromptRepository promptRepository)
     {
+        _logger = logger;
+        _promptRepository = promptRepository;
     }
 
     [RelayCommand]
@@ -63,30 +64,27 @@ public partial class PromptEditorPopupViewModel : ObservableObject, IQueryAttrib
         IsBusy = true;
         try
         {
-            if (_promptRepository != null)
+            var existingPrompt = await _promptRepository.GetActivePromptAsync();
+            var prompt = new PromptTemplate
             {
-                var existingPrompt = await _promptRepository.GetActivePromptAsync();
-                var prompt = new PromptTemplate
-                {
-                    Name = "Custom Prompt",
-                    Prompt = PromptText,
-                    IsActive = true
-                };
+                Name = "Custom Prompt",
+                Prompt = PromptText,
+                IsActive = true
+            };
 
-                if (existingPrompt != null)
-                {
-                    prompt.Id = existingPrompt.Id;
-                    await _promptRepository.UpdatePromptAsync(prompt);
-                }
-                else
-                {
-                    await _promptRepository.InsertPromptAsync(prompt);
-                }
+            if (existingPrompt != null)
+            {
+                prompt.Id = existingPrompt.Id;
+                await _promptRepository.UpdatePromptAsync(prompt);
+            }
+            else
+            {
+                await _promptRepository.InsertPromptAsync(prompt);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving prompt: {ex.Message}");
+            _logger.LogError(ex, "Error saving prompt");
         }
         finally
         {

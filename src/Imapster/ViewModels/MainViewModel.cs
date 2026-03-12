@@ -392,13 +392,22 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task EditPrompt()
     {
+        if (_promptRepository == null)
+        {
+            StatusText = "Prompt repository not available";
+            return;
+        }
+
         var parameters = new Dictionary<string, object>
         {
             { "promptRepository", _promptRepository }
         };
 
-        var popup = new PromptEditorPopup();
-        await Shell.Current.ShowPopupAsync(popup, parameters);
+        await _popupService.ShowPopupAsync<PromptEditorPopupViewModel>(
+            Shell.Current,
+            options: new PopupOptions { Shape = null, Shadow = null },
+            shellParameters: parameters
+        );
     }
 
     [RelayCommand]
