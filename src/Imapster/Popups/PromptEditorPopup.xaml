@@ -60,7 +60,6 @@
                         WidthRequest="150" />
                     <Button Text="Save" 
                         Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                         BackgroundColor="Green"
                         TextColor="White"
                         WidthRequest="150" />

@@ -21,10 +21,7 @@ public sealed class EmailAiService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private readonly IChatClient _chatClient;
-    private readonly IPromptRepository _promptRepository;
-
-    internal string StaticIntro =>
+    internal static readonly string StaticIntro =
         """
         Je bent een assistent die helpt bij het opschonen van e-mail.
 
@@ -44,13 +41,10 @@ public sealed class EmailAiService
         1. Geef een **zeer korte samenvatting** (maximaal 1–2 zinnen).
         2. Geef een **advies**: `BEHOUDEN` of `VERWIJDEREN`.
         3. Geef een **korte motivatie** (1 zin).
-
-        ### Beoordelingsregels:
         """;
 
-    internal string DefaultVerwijderRegels =>
+    internal static readonly string DefaultVerwijderRegels =
         """
-        # **VERWIJDEREN** als het gaat om:
           * reclame, aanbiedingen, nieuwsbrieven
           * tijdgebonden nieuws of aankondigingen
           * marketing, sales, events, reminders zonder blijvende waarde
@@ -58,17 +52,15 @@ public sealed class EmailAiService
           * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
         """;
 
-    internal string DefaultBehoudenRegels =>
+    internal static readonly string DefaultBehoudenRegels =
         """
-        # **BEHOUDEN** als het gaat om:
           * persoonlijke communicatie
           * werk, afspraken, contracten, facturen, bevestigingen
           * informatie die later nog nuttig kan zijn
         """;
 
-    internal string StaticOutputFormat =>
+    internal static readonly string StaticOutputFormat =
         """
-
         ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
 
         Geef één JSON-object terug met de volgende velden:
@@ -96,6 +88,9 @@ public sealed class EmailAiService
 
         Wees beslissend. Vermijd twijfelwoorden zoals "misschien".
         """;
+
+    private readonly IChatClient _chatClient;
+    private readonly IPromptRepository _promptRepository;
 
     public EmailAiService(IChatClient chatClient, IPromptRepository promptRepository)
     {
@@ -129,25 +124,22 @@ public sealed class EmailAiService
 
     private async Task<string> GetEffectivePromptAsync()
     {
-        string verwijderRegels = DefaultVerwijderRegels;
-        string behoudenRegels = DefaultBehoudenRegels;
+        var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
+        var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
 
-        if (_promptRepository != null)
-        {
-            var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
-            if (verwijderPrompt != null && !string.IsNullOrWhiteSpace(verwijderPrompt.Prompt))
-            {
-                verwijderRegels = verwijderPrompt.Prompt;
-            }
+        return $$"""
+            {StaticIntro}
+            
+            ### Beoordelingsregels:
 
-            var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
-            if (behoudenPrompt != null && !string.IsNullOrWhiteSpace(behoudenPrompt.Prompt))
-            {
-                behoudenRegels = behoudenPrompt.Prompt;
-            }
-        }
-
-        return $"{StaticIntro}\n\n{verwijderRegels}\n\n{behoudenRegels}\n\n{StaticOutputFormat}";
+            # **VERWIJDEREN** als het gaat om:
+            {verwijderRegels}
+            
+            # **BEHOUDEN** als het gaat om:
+            {behoudenRegels}
+            
+            {StaticOutputFormat}
+            """;
     }
 
     static string GetMessage(MimeMessage message)

@@ -9,7 +9,6 @@ public partial class PromptEditorPopupViewModel : ObservableObject
 {
     private readonly ILogger<PromptEditorPopupViewModel> _logger;
     private readonly IPromptRepository _promptRepository;
-    private readonly EmailAiService _emailAiService;
 
     [ObservableProperty]
     private string _verwijderRegels;
@@ -28,15 +27,14 @@ public partial class PromptEditorPopupViewModel : ObservableObject
 
     public object? Result { get; set; }
 
-    public PromptEditorPopupViewModel(ILogger<PromptEditorPopupViewModel> logger, IPromptRepository promptRepository, EmailAiService emailAiService)
+    public PromptEditorPopupViewModel(ILogger<PromptEditorPopupViewModel> logger, IPromptRepository promptRepository)
     {
         _logger = logger;
         _promptRepository = promptRepository;
-        _emailAiService = emailAiService;
-        _verwijderRegels = _emailAiService.DefaultVerwijderRegels;
-        _behoudenRegels = _emailAiService.DefaultBehoudenRegels;
-        _staticIntro = _emailAiService.StaticIntro;
-        _staticOutputFormat = _emailAiService.StaticOutputFormat;
+        _verwijderRegels = EmailAiService.DefaultVerwijderRegels;
+        _behoudenRegels = EmailAiService.DefaultBehoudenRegels;
+        _staticIntro = EmailAiService.StaticIntro;
+        _staticOutputFormat = EmailAiService.StaticOutputFormat;
     }
 
     [RelayCommand]
@@ -73,17 +71,7 @@ public partial class PromptEditorPopupViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var verwijderPrompt = new PromptTemplate
-            {
-                Prompt = VerwijderRegels
-            };
-
-            var behoudenPrompt = new PromptTemplate
-            {
-                Prompt = BehoudenRegels
-            };
-
-            await _promptRepository.SaveRulesAsync(verwijderPrompt, behoudenPrompt);
+            await _promptRepository.UpsertRulesAsync(VerwijderRegels, BehoudenRegels);
         }
         catch (Exception ex)
         {
@@ -98,7 +86,7 @@ public partial class PromptEditorPopupViewModel : ObservableObject
     [RelayCommand]
     private async Task ResetToDefaultAsync()
     {
-        VerwijderRegels = _emailAiService.DefaultVerwijderRegels;
-        BehoudenRegels = _emailAiService.DefaultBehoudenRegels;
+        VerwijderRegels = EmailAiService.DefaultVerwijderRegels;
+        BehoudenRegels = EmailAiService.DefaultBehoudenRegels;
     }
 }
