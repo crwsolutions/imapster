@@ -5,81 +5,67 @@
                xmlns:vm="clr-namespace:Imapster.ViewModels"
                x:DataType="vm:PromptEditorPopupViewModel"
                x:Class="Imapster.Popups.PromptEditorPopup"
-               Background="Black" WidthRequest="900">
+               Background="Black" WidthRequest="1200">
     <ScrollView Padding="20" VerticalOptions="Center">
-        <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,Auto,*" Spacing="15" MaximumWidthRequest="1000">
-            <!-- Column 1: Static Intro (rowspan=2) -->
-            <VerticalStackLayout Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Spacing="10">
-                <Label Text="AI Prompt Editor" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
-                <Label Text="Intro &amp; Output Format (Fixed)" FontSize="14" TextColor="Gray" />
-                <Editor Text="{Binding StaticIntro, Mode=OneWay}"
-                        IsReadOnly="True"
-                        IsEnabled="False"
-                        Multiline="True"
-                        HeightRequest="300"
-                        FontFamily="Monospace"
+        <VerticalStackLayout>
+            <Label Text="AI Prompt Editor" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+            <Grid RowDefinitions="Auto,*, auto" ColumnDefinitions="*,Auto,*" ColumnSpacing="15" >
+                <!-- Column 1: Static Intro (rowspan=2) -->
+                <VerticalStackLayout Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Spacing="10">
+                    <Label Text="Intro (Fixed)" FontSize="14" TextColor="Gray" />
+                    <Label Text="{Binding StaticIntro, Mode=OneWay}"
                         FontSize="11"
-                        Padding="10"
                         BackgroundColor="{StaticResource Gray700}"
                         TextColor="White" />
-                <Editor Text="{Binding StaticOutputFormat, Mode=OneWay}"
-                        IsReadOnly="True"
-                        IsEnabled="False"
-                        Multiline="True"
-                        HeightRequest="200"
-                        FontFamily="Monospace"
+                </VerticalStackLayout>
+
+                <!-- Column 2: Editable Rules -->
+                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="15" VerticalOptions="Start">
+                    <Label Text="Editable Rules" FontSize="16" FontAttributes="Bold" TextColor="LightGreen" />
+
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Verwijder Regels" FontSize="12" FontAttributes="Bold" TextColor="Orange" />
+                        <Editor Text="{Binding VerwijderRegels}"
+                            HeightRequest="150"
+                            FontSize="11"
+                            BackgroundColor="{StaticResource Gray600}"
+                            TextColor="White" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Behouden Regels" FontSize="12" FontAttributes="Bold" TextColor="LightBlue" />
+                        <Editor Text="{Binding BehoudenRegels}"
+                            HeightRequest="150"
+                            FontSize="11"
+                            BackgroundColor="{StaticResource Gray600}"
+                            TextColor="White" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- Column 3: Spacer -->
+                <VerticalStackLayout Grid.RowSpan="2" Grid.Column="2">
+                    <Label Text="Output Format (Fixed)" FontSize="14" TextColor="Gray" />
+                    <Label Text="{Binding StaticOutputFormat, Mode=OneWay}"
                         FontSize="11"
-                        Padding="10"
-                        BackgroundColor="{StaticResource Gray800}"
-                        TextColor="Gray" />
-            </VerticalStackLayout>
-
-            <!-- Column 2: Editable Rules -->
-            <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="15" VerticalOptions="Start">
-                <Label Text="Editable Rules" FontSize="16" FontAttributes="Bold" TextColor="LightGreen" />
-                
-                <VerticalStackLayout Spacing="5">
-                    <Label Text="Verwijder Regels" FontSize="12" FontAttributes="Bold" TextColor="Orange" />
-                    <Editor Text="{Binding VerwijderRegels}"
-                            Multiline="True"
-                            HeightRequest="150"
-                            FontFamily="Monospace"
-                            FontSize="11"
-                            Padding="10"
-                            BackgroundColor="{StaticResource Gray600}"
-                            TextColor="White" />
+                        BackgroundColor="{StaticResource Gray700}"
+                        TextColor="White" />
                 </VerticalStackLayout>
 
-                <VerticalStackLayout Spacing="5">
-                    <Label Text="Behouden Regels" FontSize="12" FontAttributes="Bold" TextColor="LightBlue" />
-                    <Editor Text="{Binding BehoudenRegels}"
-                            Multiline="True"
-                            HeightRequest="150"
-                            FontFamily="Monospace"
-                            FontSize="11"
-                            Padding="10"
-                            BackgroundColor="{StaticResource Gray600}"
-                            TextColor="White" />
-                </VerticalStackLayout>
-            </VerticalStackLayout>
-
-            <!-- Column 3: Spacer -->
-            <BoxView Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" />
-
-            <!-- Buttons -->
-            <StackLayout Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalOptions="Center" Spacing="10" Margin="0,20,0,0">
-                <Button Text="Reset to Default" 
+                <!-- Buttons -->
+                <StackLayout Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalOptions="Center" Spacing="10" Margin="0,20,0,0">
+                    <Button Text="Reset to Default" 
                         Command="{Binding ResetToDefaultCommand}"
                         BackgroundColor="{StaticResource Gray600}"
                         TextColor="White"
                         WidthRequest="150" />
-                <Button Text="Save" 
+                    <Button Text="Save" 
                         Command="{Binding SaveCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                         BackgroundColor="Green"
                         TextColor="White"
                         WidthRequest="150" />
-            </StackLayout>
-        </Grid>
+                </StackLayout>
+            </Grid>
+        </VerticalStackLayout>
     </ScrollView>
 </toolkit:Popup>

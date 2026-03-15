@@ -24,7 +24,7 @@ public sealed class EmailAiService
     private readonly IChatClient _chatClient;
     private readonly IPromptRepository _promptRepository;
 
-    private const string _staticIntro =
+    internal string StaticIntro =>
         """
         Je bent een assistent die helpt bij het opschonen van e-mail.
 
@@ -48,7 +48,7 @@ public sealed class EmailAiService
         ### Beoordelingsregels:
         """;
 
-    private const string _defaultVerwijderRegels =
+    internal string DefaultVerwijderRegels =>
         """
         # **VERWIJDEREN** als het gaat om:
           * reclame, aanbiedingen, nieuwsbrieven
@@ -58,7 +58,7 @@ public sealed class EmailAiService
           * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
         """;
 
-    private const string _defaultBehoudenRegels =
+    internal string DefaultBehoudenRegels =>
         """
         # **BEHOUDEN** als het gaat om:
           * persoonlijke communicatie
@@ -66,7 +66,7 @@ public sealed class EmailAiService
           * informatie die later nog nuttig kan zijn
         """;
 
-    private const string _staticOutputFormat =
+    internal string StaticOutputFormat =>
         """
 
         ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
@@ -129,8 +129,8 @@ public sealed class EmailAiService
 
     private async Task<string> GetEffectivePromptAsync()
     {
-        string verwijderRegels = _defaultVerwijderRegels;
-        string behoudenRegels = _defaultBehoudenRegels;
+        string verwijderRegels = DefaultVerwijderRegels;
+        string behoudenRegels = DefaultBehoudenRegels;
 
         if (_promptRepository != null)
         {
@@ -147,7 +147,7 @@ public sealed class EmailAiService
             }
         }
 
-        return $"{_staticIntro}\n\n{verwijderRegels}\n\n{behoudenRegels}\n\n{_staticOutputFormat}";
+        return $"{StaticIntro}\n\n{verwijderRegels}\n\n{behoudenRegels}\n\n{StaticOutputFormat}";
     }
 
     static string GetMessage(MimeMessage message)
