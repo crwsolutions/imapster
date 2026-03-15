@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+               xmlns:vm="clr-namespace:Imapster.ViewModels"
+               x:DataType="vm:PromptEditorPopupViewModel"
+               x:Class="Imapster.Popups.PromptEditorPopup"
+               Background="Black" WidthRequest="1200">
+    <ScrollView Padding="20" VerticalOptions="Center">
+        <VerticalStackLayout>
+            <Label Text="AI Prompt Editor" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+            <Grid RowDefinitions="Auto,*, auto" ColumnDefinitions="*,Auto,*" ColumnSpacing="15" >
+                <!-- Column 1: Static Intro (rowspan=2) -->
+                <VerticalStackLayout Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Spacing="10">
+                    <Label Text="Intro (Fixed)" FontSize="14" TextColor="Gray" />
+                    <Label Text="{Binding StaticIntro, Mode=OneWay}"
+                        FontSize="11"
+                        BackgroundColor="{StaticResource Gray700}"
+                        TextColor="White" />
+                </VerticalStackLayout>
+
+                <!-- Column 2: Editable Rules -->
+                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="15" VerticalOptions="Start">
+                    <Label Text="Editable Rules" FontSize="16" FontAttributes="Bold" TextColor="LightGreen" />
+
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Verwijder Regels" FontSize="12" FontAttributes="Bold" TextColor="Orange" />
+                        <Editor Text="{Binding VerwijderRegels}"
+                            HeightRequest="150"
+                            FontSize="11"
+                            BackgroundColor="{StaticResource Gray600}"
+                            TextColor="White" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Behouden Regels" FontSize="12" FontAttributes="Bold" TextColor="LightBlue" />
+                        <Editor Text="{Binding BehoudenRegels}"
+                            HeightRequest="150"
+                            FontSize="11"
+                            BackgroundColor="{StaticResource Gray600}"
+                            TextColor="White" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- Column 3: Spacer -->
+                <VerticalStackLayout Grid.RowSpan="2" Grid.Column="2">
+                    <Label Text="Output Format (Fixed)" FontSize="14" TextColor="Gray" />
+                    <Label Text="{Binding StaticOutputFormat, Mode=OneWay}"
+                        FontSize="11"
+                        BackgroundColor="{StaticResource Gray700}"
+                        TextColor="White" />
+                </VerticalStackLayout>
+
+                <!-- Buttons -->
+                <StackLayout Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalOptions="Center" Spacing="10" Margin="0,20,0,0">
+                    <Button Text="Reset to Default" 
+                        Command="{Binding ResetToDefaultCommand}"
+                        BackgroundColor="{StaticResource Gray600}"
+                        TextColor="White"
+                        WidthRequest="150" />
+                    <Button Text="Save" 
+                        Command="{Binding SaveCommand}"
+                        BackgroundColor="Green"
+                        TextColor="White"
+                        WidthRequest="150" />
+                </StackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</toolkit:Popup>

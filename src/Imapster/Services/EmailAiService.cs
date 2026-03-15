@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+using Imapster.Repositories;
+using Microsoft.Extensions.AI;
 using MimeKit;
 
 using System.Text;
@@ -20,17 +21,89 @@ public sealed class EmailAiService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private readonly IChatClient _chatClient;
+    internal static readonly string StaticIntro =
+        """
+        Je bent een assistent die helpt bij het opschonen van e-mail.
 
-    public EmailAiService(IChatClient chatClient)
+        Je beoordeelt een e-mail op **relevantie op lange termijn** voor de gebruiker.
+
+        De gebruiker wil **oud nieuws, reclame, promoties en niet-actuele informatie verwijderen**,
+        en **persoonlijke, belangrijke of later nog bruikbare e-mails behouden**.
+
+        Je krijgt telkens:
+
+        * Afzender
+        * Titel
+        * Inhoud
+
+        ### Taken:
+
+        1. Geef een **zeer korte samenvatting** (maximaal 1–2 zinnen).
+        2. Geef een **advies**: `BEHOUDEN` of `VERWIJDEREN`.
+        3. Geef een **korte motivatie** (1 zin).
+        """;
+
+    internal static readonly string DefaultVerwijderRegels =
+        """
+          * reclame, aanbiedingen, nieuwsbrieven
+          * tijdgebonden nieuws of aankondigingen
+          * marketing, sales, events, reminders zonder blijvende waarde
+          * DHL of PostNL Notificaties
+          * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
+        """;
+
+    internal static readonly string DefaultBehoudenRegels =
+        """
+          * persoonlijke communicatie
+          * werk, afspraken, contracten, facturen, bevestigingen
+          * informatie die later nog nuttig kan zijn
+        """;
+
+    internal static readonly string StaticOutputFormat =
+        """
+        ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
+
+        Geef één JSON-object terug met de volgende velden:
+
+        - summary: korte samenvatting van de e-mail (string)
+        - category: een van de volgende waarden: Persoonlijk, Werk, Administratie, Reclame, Nieuws, Overig
+        - delete: true als de e-mail verwijderd moet worden, false als deze bewaard kan blijven
+        - reason: korte reden voor de classificatie (string)
+        - extra: optionele extra informatie (string of null)
+
+        **Belangrijk:**
+        - Gebruik altijd de exacte veldnamen zoals hierboven.
+        - Gebruik alleen geldige JSON (dubbele aanhalingstekens voor strings, geen trailing commas, null indien leeg).
+        - Nooit extra tekst of uitleg buiten het JSON-object plaatsen.
+
+        **Voorbeeldoutput:**
+
+        {
+          "summary": "Je hebt een gratis iPhone gewonnen!",
+          "category": "Reclame",
+          "delete": true,
+          "reason": "Het belooft onrealistische beloningen en komt van een onbekende afzender.",
+          "extra": null
+        }
+
+        Wees beslissend. Vermijd twijfelwoorden zoals "misschien".
+        """;
+
+    private readonly IChatClient _chatClient;
+    private readonly IPromptRepository _promptRepository;
+
+    public EmailAiService(IChatClient chatClient, IPromptRepository promptRepository)
     {
         _chatClient = chatClient;
+        _promptRepository = promptRepository;
     }
 
     public async Task<EmailClassificationResult> ClassifyEmailAsync(MimeMessage message)
     {
+        var systemPrompt = await GetEffectivePromptAsync();
+        
         List<ChatMessage> chatHistory = [];
-        chatHistory.Add(new(ChatRole.System, _systemPrompt));
+        chatHistory.Add(new(ChatRole.System, systemPrompt));
         chatHistory.Add(new(ChatRole.User, GetMessage(message)));
         var options = new ChatOptions { };
 
@@ -47,6 +120,26 @@ public sealed class EmailAiService
         var s = bob.ToString();
         var result = JsonSerializer.Deserialize<EmailClassificationResult>(s, _jsonOptions)!;
         return result;
+    }
+
+    private async Task<string> GetEffectivePromptAsync()
+    {
+        var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
+        var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
+
+        return $$"""
+            {StaticIntro}
+            
+            ### Beoordelingsregels:
+
+            # **VERWIJDEREN** als het gaat om:
+            {verwijderRegels}
+            
+            # **BEHOUDEN** als het gaat om:
+            {behoudenRegels}
+            
+            {StaticOutputFormat}
+            """;
     }
 
     static string GetMessage(MimeMessage message)
@@ -78,68 +171,4 @@ public sealed class EmailAiService
             ? text.Substring(0, length) + "..."
             : text;
     }
-
-    const string _systemPrompt =
-        """
-        Je bent een assistent die helpt bij het opschonen van e-mail.
-
-        Je beoordeelt een e-mail op **relevantie op lange termijn** voor de gebruiker.
-
-        De gebruiker wil **oud nieuws, reclame, promoties en niet-actuele informatie verwijderen**,
-        en **persoonlijke, belangrijke of later nog bruikbare e-mails behouden**.
-
-        Je krijgt telkens:
-
-        * Afzender
-        * Titel
-        * Inhoud
-
-        ### Taken:
-
-        1. Geef een **zeer korte samenvatting** (maximaal 1–2 zinnen).
-        2. Geef een **advies**: `BEHOUDEN` of `VERWIJDEREN`.
-        3. Geef een **korte motivatie** (1 zin).
-
-        ### Beoordelingsregels:
-
-        # **VERWIJDEREN** als het gaat om:
-          * reclame, aanbiedingen, nieuwsbrieven
-          * tijdgebonden nieuws of aankondigingen
-          * marketing, sales, events, reminders zonder blijvende waarde
-          * DHL of PostNL Notificaties
-          * bevestiging van bestelling, tenzij er ook een factuur is in of bijgevoegd
-
-        # **BEHOUDEN** als het gaat om:
-          * persoonlijke communicatie
-          * werk, afspraken, contracten, facturen, bevestigingen
-          * informatie die later nog nuttig kan zijn
-
-        ### Output-formaat (STRICT JSON, RFC 8259 compliant! ALLEEN JSON, GEEN uitleg of codeblokken):
-
-        Geef één JSON-object terug met de volgende velden:
-
-        - summary: korte samenvatting van de e-mail (string)
-        - category: een van de volgende waarden: Persoonlijk, Werk, Administratie, Reclame, Nieuws, Overig
-        - delete: true als de e-mail verwijderd moet worden, false als deze bewaard kan blijven
-        - reason: korte reden voor de classificatie (string)
-        - extra: optionele extra informatie (string of null)
-
-        **Belangrijk:**
-        - Gebruik altijd de exacte veldnamen zoals hierboven.
-        - Gebruik alleen geldige JSON (dubbele aanhalingstekens voor strings, geen trailing commas, null indien leeg).
-        - Nooit extra tekst of uitleg buiten het JSON-object plaatsen.
-
-        **Voorbeeldoutput:**
-
-        {
-          "summary": "Je hebt een gratis iPhone gewonnen!",
-          "category": "Reclame",
-          "delete": true,
-          "reason": "Het belooft onrealistische beloningen en komt van een onbekende afzender.",
-          "extra": null
-        }
-
-        Wees beslissend. Vermijd twijfelwoorden zoals “misschien”.
-        """;
-
 }

@@ -1,4 +1,6 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
+using Imapster.Services;
 
 namespace Imapster.Repositories;
 
@@ -14,10 +16,6 @@ internal static class Database
         if (!File.Exists(DbPath))
         {
             CreateDatabase();
-        }
-        else
-        {
-            MigrateDatabase();
         }
     }
 
@@ -81,10 +79,29 @@ internal static class Database
             );
             """, connection);
         command3.ExecuteNonQuery();
-    }
 
-    private static void MigrateDatabase()
-    {
-        using var connection = new SqliteConnection($"Data Source={DbPath}");
+        // Create PromptTemplates table with fixed IDs (1 = VerwijderRegels, 2 = BehoudenRegels)
+        using var command4 = new SqliteCommand(
+            """
+            CREATE TABLE PromptTemplates (
+            Id INTEGER PRIMARY KEY,
+            Prompt TEXT NOT NULL
+            );
+            """, connection);
+        command4.ExecuteNonQuery();
+
+        // Insert default rules with fixed IDs using constants from EmailAiService
+        var verwijderRegels = EmailAiService.DefaultVerwijderRegels;
+        var behoudenRegels = EmailAiService.DefaultBehoudenRegels;
+        
+        using var command5 = new SqliteCommand(
+            $$"""
+            INSERT INTO PromptTemplates (Id, Prompt) VALUES 
+                (1, @Verwijder),
+                (2, @Behouden);
+            """, connection);
+        command5.Parameters.AddWithValue("@Verwijder", verwijderRegels);
+        command5.Parameters.AddWithValue("@Behouden", behoudenRegels);
+        command5.ExecuteNonQuery();
     }
 }
