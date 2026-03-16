@@ -127,16 +127,16 @@ public sealed class EmailAiService
         var verwijderPrompt = await _promptRepository.GetVerwijderRegelsAsync();
         var behoudenPrompt = await _promptRepository.GetBehoudenRegelsAsync();
 
-        return $$"""
+        return $"""
             {StaticIntro}
             
             ### Beoordelingsregels:
 
             # **VERWIJDEREN** als het gaat om:
-            {verwijderRegels}
+            {verwijderPrompt}
             
             # **BEHOUDEN** als het gaat om:
-            {behoudenRegels}
+            {behoudenPrompt}
             
             {StaticOutputFormat}
             """;
