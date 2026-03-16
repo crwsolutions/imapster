@@ -1,17 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿namespace Imapster;
 
-namespace Imapster
+public partial class App : Application
 {
-    public partial class App : Application
-    {
-        public App()
-        {
-            InitializeComponent();
-        }
+    public static IServiceProvider Services { get; private set; } = default!;
 
-        protected override Window CreateWindow(IActivationState? activationState)
-        {
-            return new Window(new AppShell());
-        }
+    public App(IServiceProvider serviceProvider)
+    {
+        Services = serviceProvider;
+
+        InitializeComponent();
     }
+
+    protected override Window CreateWindow(IActivationState? activationState) => new Window(new AppShell());
 }

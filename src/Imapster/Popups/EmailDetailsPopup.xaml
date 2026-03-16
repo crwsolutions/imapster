@@ -6,59 +6,72 @@
              x:DataType="vm:EmailViewModel"
              x:Class="Imapster.Popups.EmailDetailsPopup"
              Background="Black" WidthRequest="1280">
-    <ScrollView Padding="10">
-        <VerticalStackLayout>
-            <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5" ColumnSpacing="12">
-                <Label Text="Subject:" FontAttributes="Bold" Grid.Column="0" />
-                <Label Text="{Binding Subject}" Grid.Column="1" FontAttributes="Bold" />
-            </Grid>
-            <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
-            
-            <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
-                <Label Text="From:" FontAttributes="Bold" Grid.Column="0" />
-                <Label Text="{Binding From}" Grid.Column="1" Margin="5,0,0,0" />
-            </Grid>
-            
-            <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
-                <Label Text="To:" FontAttributes="Bold" Grid.Column="0" />
-                <Label Text="{Binding To}" Grid.Column="1" Margin="5,0,0,0" />
-            </Grid>
-            
-            <Grid ColumnDefinitions="Auto, *, auto" Margin="0,5,0,5">
-                <Label Text="Date:" FontAttributes="Bold" Grid.Column="0" />
-                <Label Text="{Binding Date}" Grid.Column="1" Margin="5,0,0,0" />
-                <Label Text="{Binding FolderId}" Grid.Column="2" Margin="5,0,0,0" />
-            </Grid>
-            
-            <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
-            
-            <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
+    <Grid RowDefinitions="*, auto">
+        <ScrollView Padding="10">
+            <VerticalStackLayout>
+                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5" ColumnSpacing="12">
+                    <Label Text="Subject:" FontAttributes="Bold" Grid.Column="0" />
+                    <Label Text="{Binding Subject}" Grid.Column="1" FontAttributes="Bold" />
+                </Grid>
+                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+
+                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
+                    <Label Text="From:" FontAttributes="Bold" Grid.Column="0" />
+                    <Label Text="{Binding From}" Grid.Column="1" Margin="5,0,0,0" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
+                    <Label Text="To:" FontAttributes="Bold" Grid.Column="0" />
+                    <Label Text="{Binding To}" Grid.Column="1" Margin="5,0,0,0" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto, *, auto" Margin="0,5,0,5">
+                    <Label Text="Date:" FontAttributes="Bold" Grid.Column="0" />
+                    <Label Text="{Binding Date}" Grid.Column="1" Margin="5,0,0,0" />
+                    <Label Text="{Binding FolderId}" Grid.Column="2" Margin="5,0,0,0" />
+                </Grid>
+
+                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+
+                <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
                 <Border StrokeShape="RoundRectangle 6" Background="Silver" Padding="8" StrokeThickness="0">
                     <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always" >
-                            <Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />
+                        <Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />
                     </ScrollView>
                 </Border>
-            
-            <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
-            
-            <Label Text="AI Information:" FontAttributes="Bold" Margin="0,5,0,5" />
-            
-            <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto" Margin="0,5,0,5" RowSpacing="8">
-                <Label Text="Summary:" FontAttributes="Bold" Grid.Column="0" />
-                <Label Text="{Binding AiSummary}" Grid.Column="1" Margin="5,0,0,0" />
-                <Label Text="Category:" FontAttributes="Bold" Grid.Column="0" Grid.Row="1" />
-                <Label Text="{Binding AiCategory}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="1" />
-                <Label Text="Delete:" FontAttributes="Bold" Grid.Column="0" Grid.Row="2" />
-                <Label Text="{Binding AiDelete}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="2" />
-                <Label Text="Delete Motivation:" FontAttributes="Bold" Grid.Column="0" Grid.Row="3" />
-                <Label Text="{Binding AiDeleteMotivation}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="4" />
-            </Grid>
-            
-            <Button Text="Close" WidthRequest="300"
-                    Clicked="OnCloseClicked" 
-                    BackgroundColor="Gray" 
-                    TextColor="White" 
-                    Margin="0,10,0,0" />
-        </VerticalStackLayout>
-    </ScrollView>
+
+                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+
+                <Label Text="AI Information:" FontAttributes="Bold" Margin="0,5,0,5" />
+
+                <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto" Margin="0,5,0,5" RowSpacing="8">
+                    <Label Text="Summary:" FontAttributes="Bold" Grid.Column="0" />
+                    <Label Text="{Binding AiSummary}" Grid.Column="1" Margin="5,0,0,0" />
+                    <Label Text="Category:" FontAttributes="Bold" Grid.Column="0" Grid.Row="1" />
+                    <Label Text="{Binding AiCategory}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="1" />
+                    <Label Text="Delete:" FontAttributes="Bold" Grid.Column="0" Grid.Row="2" />
+                    <Label Text="{Binding AiDelete}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="2" />
+                    <Label Text="Delete Motivation:" FontAttributes="Bold" Grid.Column="0" Grid.Row="3" />
+                    <Label Text="{Binding AiDeleteMotivation}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="4" />
+                </Grid>
+
+                <HorizontalStackLayout Spacing="10" Margin="0,10,0,0">
+                    <Button Text="Redo AI" 
+                        Command="{Binding RedoAiClassificationCommand}"
+                        BackgroundColor="Blue" 
+                        TextColor="White" 
+                        WidthRequest="150" />
+                    <Button Text="Close" 
+                        Clicked="OnCloseClicked" 
+                        BackgroundColor="Gray" 
+                        TextColor="White" 
+                        WidthRequest="150" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        <HorizontalStackLayout Spacing="8" Grid.Row="1">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="18" HeightRequest="18" />
+            <Label Text="{Binding Status}" />
+        </HorizontalStackLayout>
+    </Grid>
 </toolkit:Popup>

@@ -1,6 +1,8 @@
 using CommunityToolkit.Maui.Extensions;
 using Imapster.ContentViews;
 using Imapster.Popups;
+using Imapster.Repositories;
+using Imapster.Services;
 using MailKit;
 using MimeKit;
 
@@ -57,6 +59,12 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string? Status { get; set; }
 
     public EmailViewModel()
     {
@@ -154,9 +162,42 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         _ => null,
     };
 
+    private EmailAiService? _emailAiService;
+    private IEmailRepository? _emailRepository;
+
     [RelayCommand]
     private async Task ShowDetailsAsync() =>
         await Shell.Current.ShowPopupAsync(new EmailDetailsPopup(this));
+
+    [RelayCommand]
+    private async Task RedoAiClassificationAsync()
+    {
+        Status = "Running AI classification...";
+
+        IsBusy = true;
+
+        _emailAiService ??= App.Services.GetRequiredService<EmailAiService>();
+        _emailRepository ??= App.Services.GetRequiredService<IEmailRepository>();
+
+        try
+        {
+            var classification = await _emailAiService.ClassifyEmailAsync(ToMimeMessage());
+            AiSummary = classification.Summary;
+            AiCategory = classification.Category;
+            AiDelete = classification.Delete;
+            AiDeleteMotivation = classification.Reason;
+            await _emailRepository.UpdateEmailAsync(this);
+            Status = "AI classification completed";
+        }
+        catch(Exception exception)
+        {
+            Status = $"AI classification failed: {exception.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     public bool Equals(EmailViewModel? other) => 
         other is not null &&
