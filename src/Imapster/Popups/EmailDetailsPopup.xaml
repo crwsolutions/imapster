@@ -61,6 +61,11 @@
                         BackgroundColor="Blue" 
                         TextColor="White" 
                         WidthRequest="150" />
+                    <Button Text="Edit Prompt" 
+                        Clicked="OnEditPromptClicked" 
+                        BackgroundColor="Green" 
+                        TextColor="White" 
+                        WidthRequest="150" />
                     <Button Text="Close" 
                         Clicked="OnCloseClicked" 
                         BackgroundColor="Gray" 
