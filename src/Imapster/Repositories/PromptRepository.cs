@@ -17,17 +17,11 @@ public partial class PromptRepository : IPromptRepository
         _dbPath = Database.DbPath;
     }
 
-    public async Task<PromptTemplate?> GetVerwijderRegelsAsync()
-    {
-        return await GetPromptByIdAsync(VerwijderRegelsId);
-    }
+    public async Task<PromptTemplate> GetVerwijderRegelsAsync() => await GetPromptByIdAsync(VerwijderRegelsId);
 
-    public async Task<PromptTemplate?> GetBehoudenRegelsAsync()
-    {
-        return await GetPromptByIdAsync(BehoudenRegelsId);
-    }
+    public async Task<PromptTemplate> GetBehoudenRegelsAsync() => await GetPromptByIdAsync(BehoudenRegelsId);
 
-    public async Task<PromptTemplate?> GetPromptByIdAsync(int id)
+    public async Task<PromptTemplate> GetPromptByIdAsync(int id)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         const string sql = "SELECT Id, Prompt FROM PromptTemplates WHERE Id = @Id";

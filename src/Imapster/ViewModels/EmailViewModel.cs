@@ -39,10 +39,12 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public partial int AccountId { get; set; }
 
     [ObservableProperty]
-    public partial bool HasAttachments { get; set; }
+    public partial string? Attachments { get; set; }
 
     [ObservableProperty]
     public partial uint? Size { get; set; }
+
+    public bool HasAttachments => !string.IsNullOrWhiteSpace(Attachments);
 
     // AI Properties
     [ObservableProperty]
@@ -110,7 +112,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         return message;
     }
 
-    public EmailViewModel(uint id, string from, string to, DateTime date, string subject, string body, bool isRead, string folderId, int accountId, uint? size, bool hasAttachements)
+    public EmailViewModel(uint id, string from, string to, DateTime date, string subject, string body, bool isRead, string folderId, int accountId, uint? size, string? attachments)
     {
         Id = id;
         From = from;
@@ -122,11 +124,20 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         FolderId = folderId;
         AccountId = accountId;
         Size = size;
-        HasAttachments = hasAttachements;
+        Attachments = attachments;
     }
 
     public static EmailViewModel FromMessage(MimeMessage message, UniqueId id, string folderId, int accountId, uint? size, MessageFlags? flags)
     {
+        var attachments = message.Attachments
+            .OfType<MimeEntity>()
+            .Where(a => !string.IsNullOrWhiteSpace(a.ContentDisposition?.FileName))
+            .Select(a => a.ContentDisposition!.FileName!)
+            .ToList();
+        var attachmentsString = attachments.Count > 0 
+            ? string.Join(",", attachments) 
+            : null;
+
         return new EmailViewModel(
             id.Id,
             message.From.ToString(),
@@ -138,7 +149,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             folderId,
             accountId,
             size,
-            message.Attachments?.Count() > 0
+            attachmentsString
         );
     }
 
@@ -156,7 +167,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         nameof(AccountId) => AccountId,
         nameof(AiSummary) => AiSummary,
         nameof(Size) => Size,
-        nameof(HasAttachments) => HasAttachments,
+        nameof(Attachments) => Attachments,
         nameof(AiCategory) => AiCategory,
         nameof(AiDeleteMotivation) => AiDeleteMotivation,
         _ => null,
