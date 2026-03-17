@@ -35,6 +35,7 @@ public sealed class EmailAiService
         * Afzender
         * Titel
         * Inhoud
+        * Attachments
 
         ### Taken:
 
@@ -133,10 +134,10 @@ public sealed class EmailAiService
             ### Beoordelingsregels:
 
             # **VERWIJDEREN** als het gaat om:
-            {verwijderPrompt}
+            {verwijderPrompt.Prompt}
             
             # **BEHOUDEN** als het gaat om:
-            {behoudenPrompt}
+            {behoudenPrompt.Prompt}
             
             {StaticOutputFormat}
             """;
@@ -144,11 +145,21 @@ public sealed class EmailAiService
 
     static string GetMessage(MimeMessage message)
     {
+        var attachments = message.Attachments
+            .OfType<MimeEntity>()
+            .Where(a => !string.IsNullOrWhiteSpace(a.ContentDisposition?.FileName))
+            .Select(a => a.ContentDisposition!.FileName!)
+            .ToList();
+        var attachmentsInfo = attachments.Count > 0 
+            ? $"Attachments: {string.Join(", ", attachments)}" 
+            : "No attachments";
+
         return $"""
                 From: {message.From}
                 To: {message.To}
                 Subject: {message.Subject ?? string.Empty}
                 Date: {message.Date:F}
+                Attachments: {attachmentsInfo}
 
                 Body (text preview):
                 {GetBodyPreview(message, 4500)}

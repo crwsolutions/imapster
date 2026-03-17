@@ -16,7 +16,7 @@ public class EmailRepository : IEmailRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         var email = await connection.QuerySingleOrDefaultAsync<EmailViewModel>(
-            "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, HasAttachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE Id = @Id AND AccountId = @AccountId AND FolderId = @FolderId",
+            "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE Id = @Id AND AccountId = @AccountId AND FolderId = @FolderId",
             new { Id = id, AccountId = accountId, FolderId = folderId });
         return email;
     }
@@ -25,7 +25,7 @@ public class EmailRepository : IEmailRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         var emails = await connection.QueryAsync<EmailViewModel>(
-            "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, HasAttachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE FolderId = @FolderId AND AccountId = @AccountId",
+            "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE FolderId = @FolderId AND AccountId = @AccountId",
             new { FolderId = folderId, AccountId = accountId });
         return emails.ToList();
     }
@@ -34,7 +34,7 @@ public class EmailRepository : IEmailRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         await connection.ExecuteAsync(
-            "INSERT INTO Emails (Id, FromAddress, ToAddress, Date, Subject, Body, IsRead, FolderId, AccountId, HasAttachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation) VALUES (@Id, @From, @To, @Date, @Subject, @Body, @IsRead, @FolderId, @AccountId, @HasAttachments, @Size, @AiSummary, @AiCategory, @AiDelete, @AiDeleteMotivation)",
+            "INSERT INTO Emails (Id, FromAddress, ToAddress, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation) VALUES (@Id, @From, @To, @Date, @Subject, @Body, @IsRead, @FolderId, @AccountId, @Attachments, @Size, @AiSummary, @AiCategory, @AiDelete, @AiDeleteMotivation)",
             email);
     }
 
@@ -42,7 +42,7 @@ public class EmailRepository : IEmailRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         await connection.ExecuteAsync(
-            "UPDATE Emails SET FromAddress = @From, ToAddress = @To, Date = @Date, Subject = @Subject, Body = @Body, IsRead = @IsRead, HasAttachments = @HasAttachments, Size = @Size, AiSummary = @AiSummary, AiCategory = @AiCategory, AiDelete = @AiDelete, AiDeleteMotivation = @AiDeleteMotivation WHERE Id = @Id AND FolderId = @FolderId AND AccountId = @AccountId",
+            "UPDATE Emails SET FromAddress = @From, ToAddress = @To, Date = @Date, Subject = @Subject, Body = @Body, IsRead = @IsRead, Attachments = @Attachments, Size = @Size, AiSummary = @AiSummary, AiCategory = @AiCategory, AiDelete = @AiDelete, AiDeleteMotivation = @AiDeleteMotivation WHERE Id = @Id AND FolderId = @FolderId AND AccountId = @AccountId",
             email);
     }
 
@@ -64,6 +64,18 @@ public class EmailRepository : IEmailRepository
         return emailIds.ToList();
     }
 
+    public async Task BulkInsertEmailsAsync(IEnumerable<EmailViewModel> emails)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+
+        const string sql = @"
+            INSERT OR REPLACE INTO Emails 
+            (Id, FromAddress, ToAddress, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation)
+            VALUES (@Id, @From, @To, @Date, @Subject, @Body, @IsRead, @FolderId, @AccountId, @Attachments, @Size, @AiSummary, @AiCategory, @AiDelete, @AiDeleteMotivation)";
+
+        await connection.ExecuteAsync(sql, emails);
+    }
+
     public async Task<List<(uint uid, bool isRead)>> GetStoredEmailUidsAndFlagsByFolderIdAsync(int accountId, string folderId)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -79,18 +91,6 @@ public class EmailRepository : IEmailRepository
         await connection.ExecuteAsync(
             "UPDATE Emails SET IsRead = @IsRead WHERE Id = @Id AND AccountId = @AccountId AND FolderId = @FolderId",
             new { Id = id, IsRead = isRead, AccountId = accountId, FolderId = folderId });
-    }
-
-    public async Task BulkInsertEmailsAsync(IEnumerable<EmailViewModel> emails)
-    {
-        using var connection = new SqliteConnection($"Data Source={_dbPath}");
-
-        const string sql = @"
-            INSERT OR REPLACE INTO Emails 
-            (Id, FromAddress, ToAddress, Date, Subject, Body, IsRead, FolderId, AccountId, HasAttachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation)
-            VALUES (@Id, @From, @To, @Date, @Subject, @Body, @IsRead, @FolderId, @AccountId, @HasAttachments, @Size, @AiSummary, @AiCategory, @AiDelete, @AiDeleteMotivation)";
-
-        await connection.ExecuteAsync(sql, emails);
     }
 
     public async Task BulkDeleteEmailsAsync(int accountId, string folderId, IEnumerable<uint> ids)

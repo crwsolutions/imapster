@@ -67,7 +67,7 @@ internal static class Database
             Subject NVARCHAR(255) NOT NULL,
             Body TEXT NOT NULL,
             IsRead BOOLEAN NOT NULL,
-            HasAttachments BOOLEAN NOT NULL DEFAULT 0,
+            Attachments TEXT NULL,
             Size INTEGER NULL,
             AiSummary TEXT NULL,
             AiCategory NVARCHAR(255) NULL,
