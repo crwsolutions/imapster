@@ -101,7 +101,7 @@ public sealed class EmailAiService
         _promptRepository = promptRepository;
     }
 
-    public async Task<EmailClassificationResult> ClassifyEmailAsync(EmailViewModel email)
+    public async Task<EmailClassificationResult> ClassifyEmailAsync(EmailViewModel email, CancellationToken cancellationToken = default)
     {
         var systemPrompt = await GetEffectivePromptAsync();
         
@@ -112,12 +112,19 @@ public sealed class EmailAiService
 
         var bob = new StringBuilder();
 
-        await foreach (var chunk in _chatClient.GetStreamingResponseAsync(chatHistory, options, CancellationToken.None))
+        try
         {
-            if (!string.IsNullOrEmpty(chunk.Text))
+            await foreach (var chunk in _chatClient.GetStreamingResponseAsync(chatHistory, options, cancellationToken))
             {
-                bob.Append(chunk.Text);
+                if (!string.IsNullOrEmpty(chunk.Text))
+                {
+                    bob.Append(chunk.Text);
+                }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Re-throw to allow caller to handle cancellation
         }
 
         var s = bob.ToString();
