@@ -327,7 +327,7 @@ public partial class MainViewModel : BaseViewModel
                     i++;
                     try
                     {
-                        var classification = await _emailAiService.ClassifyEmailAsync(email.ToMimeMessage());
+                        var classification = await _emailAiService.ClassifyEmailAsync(email);
                         email.AiSummary = classification.Summary;
                         email.AiCategory = classification.Category;
                         email.AiDelete = classification.Delete;

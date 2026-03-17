@@ -93,25 +93,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         return $"{bytes / GB:0.0} GB";
     }
 
-    public MimeMessage ToMimeMessage()
-    {
-        var message = new MimeMessage();
-        message.MessageId = Id.ToString();
-        message.From.Add(MailboxAddress.Parse(From));
-        try
-        {
-            message.To.Add(MailboxAddress.Parse(To));
-        }
-        catch
-        {
-            //pitty
-        }
-        message.Date = DateTimeOffset.FromUnixTimeSeconds(new DateTimeOffset(Date).ToUnixTimeSeconds());
-        message.Subject = Subject;
-        message.Body = new TextPart("plain") { Text = Body };
-        return message;
-    }
-
     public EmailViewModel(uint id, string from, string to, DateTime date, string subject, string body, bool isRead, string folderId, int accountId, uint? size, string? attachments)
     {
         Id = id;
@@ -192,7 +173,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
 
         try
         {
-            var classification = await _emailAiService.ClassifyEmailAsync(ToMimeMessage());
+            var classification = await _emailAiService.ClassifyEmailAsync(this);
             AiSummary = classification.Summary;
             AiCategory = classification.Category;
             AiDelete = classification.Delete;

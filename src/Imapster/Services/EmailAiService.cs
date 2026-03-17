@@ -1,4 +1,5 @@
 using Imapster.Repositories;
+using Imapster.ViewModels;
 using Microsoft.Extensions.AI;
 using MimeKit;
 
@@ -99,13 +100,13 @@ public sealed class EmailAiService
         _promptRepository = promptRepository;
     }
 
-    public async Task<EmailClassificationResult> ClassifyEmailAsync(MimeMessage message)
+    public async Task<EmailClassificationResult> ClassifyEmailAsync(EmailViewModel email)
     {
         var systemPrompt = await GetEffectivePromptAsync();
         
         List<ChatMessage> chatHistory = [];
         chatHistory.Add(new(ChatRole.System, systemPrompt));
-        chatHistory.Add(new(ChatRole.User, GetMessage(message)));
+        chatHistory.Add(new(ChatRole.User, GetMessage(email)));
         var options = new ChatOptions { };
 
         var bob = new StringBuilder();
@@ -143,43 +144,21 @@ public sealed class EmailAiService
             """;
     }
 
-    static string GetMessage(MimeMessage message)
+    static string GetMessage(EmailViewModel email)
     {
-        var attachments = message.Attachments
-            .OfType<MimeEntity>()
-            .Where(a => !string.IsNullOrWhiteSpace(a.ContentDisposition?.FileName))
-            .Select(a => a.ContentDisposition!.FileName!)
-            .ToList();
-        var attachmentsInfo = attachments.Count > 0 
-            ? $"Attachments: {string.Join(", ", attachments)}" 
+        var attachmentsInfo = !string.IsNullOrWhiteSpace(email.Attachments)
+            ? $"Attachments: {email.Attachments}"
             : "No attachments";
 
         return $"""
-                From: {message.From}
-                To: {message.To}
-                Subject: {message.Subject ?? string.Empty}
-                Date: {message.Date:F}
+                From: {email.From}
+                To: {email.To}
+                Subject: {email.Subject}
+                Date: {email.Date:F}
                 Attachments: {attachmentsInfo}
 
                 Body (text preview):
-                {GetBodyPreview(message, 4500)}
+                {email.Body}
                 """;
-    }
-
-    static string GetBodyPreview(MimeMessage message, int length)
-    {
-        var text = message.TextBody;
-
-        if (string.IsNullOrWhiteSpace(text))
-            text = message.HtmlBody;
-
-        if (string.IsNullOrWhiteSpace(text))
-            return "<no body>";
-
-        text = text.Replace("\r", " ").Replace("\n", " ");
-
-        return text.Length > length
-            ? text.Substring(0, length) + "..."
-            : text;
     }
 }
