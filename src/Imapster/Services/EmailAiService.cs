@@ -36,7 +36,8 @@ public sealed class EmailAiService
         * Afzender
         * Titel
         * Inhoud
-        * Attachments
+        * Leesstatus (gelezen/ongelezen)
+        * Bijlagen
 
         ### Taken:
 
@@ -155,6 +156,7 @@ public sealed class EmailAiService
                 To: {email.To}
                 Subject: {email.Subject}
                 Date: {email.Date:F}
+                Read Status: {(email.IsRead ? "Read" : "Unread")}
                 Attachments: {attachmentsInfo}
 
                 Body (text preview):
