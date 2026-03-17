@@ -173,7 +173,7 @@ public partial class MainViewModel : BaseViewModel
             // Only set default folder if none is selected or it's not in the list anymore
             if (SelectedFolder == null || !Folders.Any(f => f.Id == SelectedFolder.Id))
             {
-                SelectedFolder = Folders.FirstOrDefault(f => f.Name.ToLower() == "inbox") ?? Folders.First();
+                SelectedFolder = Folders.FirstOrDefault(f => string.Equals(f.Name, "inbox", StringComparison.OrdinalIgnoreCase)) ?? Folders.First();
 
                 StatusText = $"Selected folder '{SelectedFolder.Name}'";
             }
@@ -455,7 +455,7 @@ public partial class MainViewModel : BaseViewModel
 
         // Get selected emails
         var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
-        if (!selectedEmails.Any())
+        if (selectedEmails.Count == 0)
         {
             StatusText = "No emails selected";
             return;
@@ -509,7 +509,7 @@ public partial class MainViewModel : BaseViewModel
         }
 
         var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
-        if (!selectedEmails.Any())
+        if (selectedEmails.Count == 0)
         {
             StatusText = "No emails selected";
             return;
@@ -573,9 +573,7 @@ public partial class MainViewModel : BaseViewModel
             await page.DisplayAlertAsync("Invalid Operation", "This is not a trash folder.", "OK");
             return;
         }
-
-        var confirmed = false;
-        confirmed = await page.DisplayAlertAsync(
+        bool confirmed = await page.DisplayAlertAsync(
             "Empty Trash",
             "Are you sure you want to permanently delete all items in the trash folder?\nThis will remove emails from both local storage and the mail server.",
             "Yes", "No");

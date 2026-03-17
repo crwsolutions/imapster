@@ -27,6 +27,8 @@
 		<!-- For: XAML Source generator -->
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
 		<!-- Display name -->
 		<ApplicationTitle>Imapster</ApplicationTitle>
 

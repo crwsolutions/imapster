@@ -30,7 +30,7 @@ public class EmailRepository : IEmailRepository
         var emails = await connection.QueryAsync<EmailViewModel>(
             "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE FolderId = @FolderId AND AccountId = @AccountId",
             new { FolderId = folderId, AccountId = accountId });
-        return emails.ToList();
+        return [.. emails];
     }
 
     public async Task AddEmailAsync(EmailViewModel email)
@@ -64,7 +64,7 @@ public class EmailRepository : IEmailRepository
         var emailIds = await connection.QueryAsync<uint>(
             "SELECT Id FROM Emails WHERE FolderId = @FolderId AND AccountId = @AccountId",
             new { FolderId = folderId, AccountId = accountId });
-        return emailIds.ToList();
+        return [.. emailIds];
     }
 
     public async Task BulkInsertEmailsAsync(IEnumerable<EmailViewModel> emails)
@@ -85,7 +85,7 @@ public class EmailRepository : IEmailRepository
         var emailUids = await connection.QueryAsync<(uint uid, bool isRead)>(
             "SELECT Id as uid, IsRead as isRead FROM Emails WHERE FolderId = @FolderId AND AccountId = @AccountId",
             new { FolderId = folderId, AccountId = accountId });
-        return emailUids.ToList();
+        return [.. emailUids];
     }
 
     public async Task UpdateEmailFlagsAsync(int accountId, string folderId, uint id, bool isRead)
