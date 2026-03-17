@@ -26,7 +26,10 @@ public partial class PromptRepository : IPromptRepository
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         const string sql = "SELECT Id, Prompt FROM PromptTemplates WHERE Id = @Id";
         var result = await connection.QueryFirstOrDefaultAsync<PromptTemplate>(sql, new { Id = id });
-        return result;
+        if (result != null)
+            return result;
+            
+        throw new KeyNotFoundException($"Prompt template with ID {id} not found.");
     }
 
     public async Task UpsertRulesAsync(string verwijderRegels, string behoudenRegels)

@@ -25,7 +25,10 @@ public class FolderRepository : IFolderRepository
         var folder = await connection.QuerySingleOrDefaultAsync<FolderViewModel>(
             "SELECT Id, Name, UnreadCount, IsTrash, AccountId FROM Folders WHERE Id = @Id AND AccountId = @AccountId",
             new { Id = id, AccountId = accountId });
-        return folder;
+        if (folder != null)
+            return folder;
+            
+        throw new KeyNotFoundException($"Folder with ID '{id}' not found for account {accountId}.");
     }
 
     public async Task AddFolderAsync(FolderViewModel folder)

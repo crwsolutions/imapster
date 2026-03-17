@@ -124,7 +124,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             message.From.ToString(),
             message.To.ToString(),
             message.Date.DateTime,
-            message.Subject,
+            message.Subject ?? "-",
             message.TextBody ?? message.HtmlBody ?? "",
             flags?.HasFlag(MessageFlags.Seen) is true,
             folderId,

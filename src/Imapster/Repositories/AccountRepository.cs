@@ -1,4 +1,3 @@
-using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace Imapster.Repositories;
@@ -26,7 +25,10 @@ public class AccountRepository : IAccountRepository
         var account = await connection.QuerySingleOrDefaultAsync<ImapAccountViewModel>(
             "SELECT Id, Name, Server, Port, UseSsl, Username, Password FROM Accounts WHERE Id = @Id",
             new { Id = id });
-        return account;
+        if (account != null)
+            return account;
+            
+        throw new KeyNotFoundException($"Account with ID '{id}' not found.");
     }
 
     public async Task AddAccountAsync(ImapAccountViewModel account)

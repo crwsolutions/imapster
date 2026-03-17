@@ -18,7 +18,10 @@ public class EmailRepository : IEmailRepository
         var email = await connection.QuerySingleOrDefaultAsync<EmailViewModel>(
             "SELECT Id, FromAddress as `From`, ToAddress as `To`, Date, Subject, Body, IsRead, FolderId, AccountId, Attachments, Size, AiSummary, AiCategory, AiDelete, AiDeleteMotivation FROM Emails WHERE Id = @Id AND AccountId = @AccountId AND FolderId = @FolderId",
             new { Id = id, AccountId = accountId, FolderId = folderId });
-        return email;
+        if (email != null)
+            return email;
+            
+        throw new KeyNotFoundException($"Email with ID {id} not found in folder {folderId} for account {accountId}.");
     }
 
     public async Task<List<EmailViewModel>> GetEmailsByFolderIdAsync(int accountId, string folderId)
