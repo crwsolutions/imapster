@@ -32,6 +32,7 @@ public partial class MainViewModel : BaseViewModel
     public partial int RowCount { get; set; } = 0;
 
     private bool _isLoading = true;
+    private CancellationTokenSource? _aiCancellationTokenSource;
 
     partial void OnSelectedFolderChanged(FolderViewModel? value)
     {
@@ -312,9 +313,21 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
+        // Cancel any ongoing classification first
+        _aiCancellationTokenSource?.Cancel();
+        _aiCancellationTokenSource?.Dispose();
+        
         IsBusy = true;
+        _aiCancellationTokenSource = new CancellationTokenSource();
 
-        StatusText = "Connecting to ai...";
+        StatusText = "Connecting to AI...";
+
+        // Show cancel popup
+        var popup = new CancelAiPopup(_aiCancellationTokenSource);
+        Application.Current!.Windows[0].Page!.ShowPopup(popup, new PopupOptions
+        {
+            CanBeDismissedByTappingOutsideOfPopup = false
+        });
 
         int i = 0;
 
@@ -322,12 +335,14 @@ public partial class MainViewModel : BaseViewModel
         {
             foreach (var email in Emails)
             {
+                _aiCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                
                 if (string.IsNullOrWhiteSpace(email.AiSummary))
                 {
                     i++;
                     try
                     {
-                        var classification = await _emailAiService.ClassifyEmailAsync(email);
+                        var classification = await _emailAiService.ClassifyEmailAsync(email, _aiCancellationTokenSource.Token);
                         email.AiSummary = classification.Summary;
                         email.AiCategory = classification.Category;
                         email.AiDelete = classification.Delete;
@@ -343,12 +358,25 @@ public partial class MainViewModel : BaseViewModel
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            StatusText = "AI classification cancelled";
+        }
         finally
         {
             IsBusy = false;
+            // Close the popup
+            await popup.CloseAsync(false);
         }    
 
         StatusText = $"AI processed {i} emails.";
+    }
+
+    [RelayCommand]
+    private void CancelAiClassification()
+    {
+        _aiCancellationTokenSource?.Cancel();
+        StatusText = "AI classification cancelled";
     }
 
     [RelayCommand]
