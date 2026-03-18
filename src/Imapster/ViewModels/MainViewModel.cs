@@ -163,10 +163,9 @@ public partial class MainViewModel : BaseViewModel
 
         Folders.Clear();
         var folders = await _folderRepository.GetAllFoldersAsync(SelectedAccount.Id);
-        foreach (var folder in folders)
-        {
-            Folders.Add(folder);
-        }
+
+        // Build the folder hierarchy tree
+        BuildFolderHierarchy(folders);
 
         if (Folders?.Count > 0)
         {
@@ -178,6 +177,76 @@ public partial class MainViewModel : BaseViewModel
                 StatusText = $"Selected folder '{SelectedFolder.Name}'";
             }
         }
+    }
+
+    private void BuildFolderHierarchy(List<FolderViewModel> flatFolders)
+    {
+        Folders.Clear();
+        
+        // Flatten the folder hierarchy into a single list with proper indentation
+        var flattenedFolders = new List<FolderViewModel>();
+        var folderLookup = flatFolders.ToDictionary(f => f.Id);
+        
+        // Find root folders (folders without a parent)
+        var rootFolders = flatFolders.Where(f => GetParentFolder(f, folderLookup) == null).ToList();
+        
+        // Recursively add all folders with their indent levels
+        foreach (var rootFolder in rootFolders)
+        {
+            FlattenFolderRecursive(rootFolder, 0, folderLookup, flattenedFolders);
+        }
+        
+        // Add all folders to the Folders collection
+        foreach (var folder in flattenedFolders)
+        {
+            Folders.Add(folder);
+        }
+    }
+
+    private void FlattenFolderRecursive(FolderViewModel folder, int indentLevel, Dictionary<string, FolderViewModel> folderLookup, List<FolderViewModel> result)
+    {
+        // Create a copy with the correct indent level
+        var folderCopy = new FolderViewModel
+        {
+            Id = folder.Id,
+            Name = folder.Name,
+            UnreadCount = folder.UnreadCount,
+            AccountId = folder.AccountId,
+            IsTrash = folder.IsTrash,
+            IndentLevel = indentLevel,
+            HasChildren = HasChildren(folder, folderLookup)
+        };
+        
+        result.Add(folderCopy);
+        
+        // Find and recursively add children
+        var children = folderLookup.Values
+            .Where(f => GetParentFolder(f, folderLookup)?.Id == folder.Id)
+            .ToList();
+        
+        foreach (var child in children)
+        {
+            FlattenFolderRecursive(child, indentLevel + 1, folderLookup, result);
+        }
+    }
+
+    private bool HasChildren(FolderViewModel folder, Dictionary<string, FolderViewModel> folderLookup)
+    {
+        return folderLookup.Values.Any(f => GetParentFolder(f, folderLookup)?.Id == folder.Id);
+    }
+
+    private FolderViewModel? GetParentFolder(FolderViewModel folder, Dictionary<string, FolderViewModel> folderLookup)
+    {
+        var id = folder.Id;
+        var lastDotIndex = id.LastIndexOf('.');
+        
+        if (lastDotIndex <= 0)
+        {
+            return null; // No parent
+        }
+        
+        var parentId = id.Substring(0, lastDotIndex);
+        return folderLookup.TryGetValue(parentId, out var parent) ? parent : null;
     }
 
     private async Task LoadEmailsForFolderAsync(string id)

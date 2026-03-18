@@ -9,4 +9,6 @@
     <converters:AiForegroundConverter x:Key="AiForegroundConverter" />
     <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
     <converters:BoolToBoldConverter x:Key="BoolToBoldConverter" />
+    <converters:IntToThicknessConverter x:Key="IntToThicknessConverter" />
+    <converters:BoolToSelectionColorConverter x:Key="BoolToSelectionColorConverter" />
 </ResourceDictionary>
