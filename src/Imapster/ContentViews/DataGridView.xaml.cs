@@ -15,6 +15,7 @@ namespace Imapster.ContentViews
         private bool _sortAscending = true;
         private Dictionary<string, List<object?>> _filters = new();
         private ObservableCollection<IDataGridItem> _displayedItems = new ObservableCollection<IDataGridItem>();
+        private int _lastSelectedIndex = -1;
 
         public IEnumerable ItemsSource
         {
@@ -93,7 +94,9 @@ namespace Imapster.ContentViews
         private void RefreshData()
         {
             if (ItemsSource is not IEnumerable source)
+            {
                 return;
+            }
 
             var items = source.Cast<IDataGridItem>().ToList();
 
@@ -120,7 +123,9 @@ namespace Imapster.ContentViews
                 var columnKey = filter.Key;
                 var column = Columns.FirstOrDefault(c => c.Key == columnKey);
                 if (column == null)
+                {
                     continue;
+                }
 
                 // Create SearchValues<string> once per filter
                 var stringArray = filter.Value
@@ -144,11 +149,15 @@ namespace Imapster.ContentViews
         private IEnumerable<IDataGridItem> ApplySorting(IEnumerable<IDataGridItem> items)
         {
             if (string.IsNullOrEmpty(_currentSortKey))
+            {
                 return items;
+            }
 
             var column = Columns.FirstOrDefault(c => c.Key == _currentSortKey);
             if (column == null || !column.IsSortable)
+            {
                 return items;
+            }
 
             var sortedItems = items.ToList();
 
@@ -461,7 +470,9 @@ namespace Imapster.ContentViews
         private void RestoreState()
         {
             if (!Preferences.ContainsKey(PreferencesKey))
+            {
                 return;
+            }
 
             var stateJson = Preferences.Get(PreferencesKey, string.Empty);
             try
@@ -480,7 +491,10 @@ namespace Imapster.ContentViews
 
         private void ApplyState(DataGridState state)
         {
-            if (state == null) return;
+            if (state == null)
+            {
+                return;
+            }
 
             // Apply column visibility
             foreach (var col in Columns)
@@ -504,11 +518,70 @@ namespace Imapster.ContentViews
         // Multi-select functionality
         private void OnRowTapped(object? sender, TappedEventArgs e)
         {
-            if (sender is BindableObject bo && bo.BindingContext is IDataGridItem rowItem)
+            if (sender is not BindableObject bo || bo.BindingContext is not IDataGridItem rowItem)
             {
-                rowItem.IsSelected = !rowItem.IsSelected;
                 return;
             }
+
+            var index = _displayedItems.IndexOf(rowItem);
+            if (index < 0)
+            {
+                return;
+            }
+
+            if (IsCtrlPressed()) // Ctrl+klik: toggle selectie van deze rij
+            {
+                rowItem.IsSelected = !rowItem.IsSelected;
+                _lastSelectedIndex = index;
+            }
+            else if (IsShiftPressed() && _lastSelectedIndex >= 0) // Shift+klik: range selectie (voeg toe aan bestaande selectie)
+            {
+                var start = Math.Min(_lastSelectedIndex, index);
+                var end = Math.Max(_lastSelectedIndex, index);
+
+                for (int i = start; i <= end; i++)
+                {
+                    _displayedItems[i].IsSelected = true;
+                }
+
+                _lastSelectedIndex = index;
+            }
+            else // Gewone klik: selecteer alleen deze rij
+            {
+                foreach (var item in _displayedItems)
+                {
+                    item.IsSelected = false;
+                }
+
+                rowItem.IsSelected = true;
+                _lastSelectedIndex = index;
+            }
+        }
+
+        private bool IsCtrlPressed()
+        {
+#if WINDOWS
+            return Microsoft.UI.Input.InputKeyboardSource
+                .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control)
+                .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+#elif MACCATALYST
+            return Foundation.NSApplication.SharedApplication.ModifierFlags.HasFlag(Foundation.NSModifierFlags.Control);
+#else
+            return false;
+#endif
+        }
+
+        private bool IsShiftPressed()
+        {
+#if WINDOWS
+            return Microsoft.UI.Input.InputKeyboardSource
+                .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift)
+                .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+#elif MACCATALYST
+            return Foundation.NSApplication.SharedApplication.ModifierFlags.HasFlag(Foundation.NSModifierFlags.Shift);
+#else
+            return false;
+#endif
         }
 
         private void OnClearFilterTapped(object? sender, EventArgs e)
