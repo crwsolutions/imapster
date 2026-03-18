@@ -97,8 +97,8 @@
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
                                 <Grid HeightRequest="28" HorizontalOptions="Center">
-                                    <BoxView BackgroundColor="{Binding AiCategory, Converter={StaticResource AiBackgroundConverter}}" CornerRadius="6"/>
-                                    <Label Text="{Binding AiCategory}" VerticalOptions="Center" HorizontalOptions="Center" Margin="8,0,8,0" FontSize="12" TextColor="{Binding AiCategory, Converter={StaticResource AiForegroundConverter}}"/>
+                                    <BoxView BackgroundColor="{Binding AiCategory, Converter={StaticResource AiBackgroundConverter}, Mode=OneWay}" CornerRadius="6"/>
+                                    <Label Text="{Binding AiCategory, Mode=OneWay}" VerticalOptions="Center" HorizontalOptions="Center" Margin="8,0,8,0" FontSize="12" TextColor="{Binding AiCategory, Converter={StaticResource AiForegroundConverter}, Mode=OneWay}"/>
                                 </Grid>
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
@@ -106,7 +106,7 @@
                     <cv:DataGridColumn Header="Delete" Key="AiDelete" Width="120">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <CheckBox IsChecked="{Binding AiDelete}" IsEnabled="False" VerticalOptions="Center" HorizontalOptions="Center" />
+                                <CheckBox IsChecked="{Binding AiDelete, Mode=OneWay}" IsEnabled="False" VerticalOptions="Center" HorizontalOptions="Center" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>

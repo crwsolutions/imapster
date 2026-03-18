@@ -345,7 +345,8 @@ namespace Imapster.ContentViews
                         // Bind the label text to the column's value selector
                         cellLabel.SetBinding(Label.TextProperty, new Binding
                         {
-                            Path = column.Key
+                            Path = column.Key,
+                            Mode = BindingMode.OneWay,
                         });
 
                         // Set the grid column
