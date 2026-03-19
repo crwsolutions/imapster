@@ -5,5 +5,7 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="src/Imapster.HtmlRendering.Tests/Imapster.HtmlRendering.Tests.csproj" />
+  <Project Path="src/Imapster.HtmlRendering/Imapster.HtmlRendering.csproj" />
   <Project Path="src/Imapster/Imapster.csproj" />
 </Solution>
