@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
-             xmlns:vm="clr-namespace:Imapster.ViewModels"
-             x:DataType="vm:EmailViewModel"
-             x:Class="Imapster.Popups.EmailDetailsPopup"
-             Background="Black" WidthRequest="1280">
+              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+              xmlns:vm="clr-namespace:Imapster.ViewModels"
+              xmlns:html="clr-namespace:Imapster.HtmlRendering.Controls;assembly=Imapster.HtmlRendering"
+              x:DataType="vm:EmailViewModel"
+              x:Class="Imapster.Popups.EmailDetailsPopup"
+              Background="Black" WidthRequest="1280">
     <ScrollView Padding="10">
         <VerticalStackLayout>
             <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5" ColumnSpacing="12">
@@ -35,7 +36,10 @@
             <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
                 <Border StrokeShape="RoundRectangle 6" Background="Silver" Padding="8" StrokeThickness="0">
                     <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always" >
-                            <Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />
+                            <html:HtmlView x:Name="HtmlBodyView" 
+                                          HtmlBody="{Binding Body}" 
+                                          WidthRequest="1000"
+                                          HeightRequest="400" />
                     </ScrollView>
                 </Border>
             

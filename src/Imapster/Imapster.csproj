@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-android</TargetFrameworks>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -78,6 +77,12 @@
 		<PackageReference Include="Dapper" Version="2.1.72" />
 		<PackageReference Include="OllamaSharp" Version="5.4.23" />
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.4.0" />
+		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.2" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Imapster.HtmlRendering\Imapster.HtmlRendering.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
