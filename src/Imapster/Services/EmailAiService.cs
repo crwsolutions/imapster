@@ -35,9 +35,10 @@ public sealed class EmailAiService
 
         * Afzender
         * Titel
-        * Inhoud
+        * Datum inclusief leeftijd (nieuw, oud, zeer oud)
         * Leesstatus (gelezen/ongelezen)
         * Bijlagen
+        * Inhoud
 
         ### Taken:
 
@@ -157,17 +158,61 @@ public sealed class EmailAiService
         var attachmentsInfo = !string.IsNullOrWhiteSpace(email.Attachments)
             ? $"Attachments: {email.Attachments}"
             : "No attachments";
+            
+        var ageInfo = GetAgeInfo(email.Date);
+        var classification = ClassifyEmailAge(email.Date);
 
         return $"""
-                From: {email.From}
+                Afzender: {email.From}
                 To: {email.To}
-                Subject: {email.Subject}
-                Date: {email.Date:F}
-                Read Status: {(email.IsRead ? "Read" : "Unread")}
-                Attachments: {attachmentsInfo}
+                Titel: {email.Subject}
+                Datum: {email.Date:yyyy-MM-dd} ({ageInfo})
+                Datum classificatie: {classification}
+                Lees Status: {(email.IsRead ? "gelezen" : "ongelezen")}
+                Bijlagen: {attachmentsInfo}
 
-                Body (text preview):
+                Inhoud:
                 {email.Body}
                 """;
+    }
+
+    private static string GetAgeInfo(DateTime emailDate)
+    {
+        var now = DateTime.Now;
+        var diff = now - emailDate;
+        
+        var years = diff.TotalDays / 365.25;
+        var months = diff.TotalDays / 30.44;
+        
+        if (years >= 1)
+        {
+            var fullYears = (int)years;
+            var remainingMonths = (int)((months - fullYears * 12) % 12);
+            return $"{fullYears} year{(fullYears != 1 ? "s" : "")}, {remainingMonths} month{(remainingMonths != 1 ? "s" : "")}";
+        }
+        else if (months >= 1)
+        {
+            var fullMonths = (int)months;
+            return $"{fullMonths} month{(fullMonths != 1 ? "s" : "")}";
+        }
+        else
+        {
+            var days = diff.TotalDays;
+            return $"{(int)days} day{(days != 1 ? "s" : "")}";
+        }
+    }
+
+    private static string ClassifyEmailAge(DateTime emailDate)
+    {
+        var now = DateTime.Now;
+        var diff = now - emailDate;
+        var months = (int)(diff.TotalDays / 30.44);
+        
+        return months switch
+        {
+            < 3 => "nieuw",
+            >= 3 and < 12 => "oud",
+            _ => "zeer oud"
+        };
     }
 }
