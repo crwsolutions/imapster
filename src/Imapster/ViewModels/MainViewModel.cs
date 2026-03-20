@@ -399,31 +399,38 @@ public partial class MainViewModel : BaseViewModel
         });
 
         int i = 0;
+        var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
+        if (selectedEmails.Count > 0)
+        { 
+            StatusText = $"Processing {selectedEmails.Count} selected emails...";
+        }
+        else
+        { 
+            selectedEmails = [.. Emails.Where(e => string.IsNullOrWhiteSpace(e.AiSummary))];
+            StatusText = $"Processing all new emails ({selectedEmails.Count} emails)...";
+        }
 
         try
         {
-            foreach (var email in Emails)
+            foreach (var email in selectedEmails)
             {
                 _aiCancellationTokenSource.Token.ThrowIfCancellationRequested();
                 
-                if (string.IsNullOrWhiteSpace(email.AiSummary))
+                i++;
+                try
                 {
-                    i++;
-                    try
-                    {
-                        var classification = await _emailAiService.ClassifyEmailAsync(email, _aiCancellationTokenSource.Token);
-                        email.AiSummary = classification.Summary;
-                        email.AiCategory = classification.Category;
-                        email.AiDelete = classification.Delete;
-                        email.AiDeleteMotivation = classification.Reason;
-                        await _emailRepository.UpdateEmailAsync(email);
-                        StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
-                    }
-                    catch (Exception ex)
-                    {
-                        StatusText = $"Error generating summary: {ex.Message}";
-                        return;
-                    }
+                    var classification = await _emailAiService.ClassifyEmailAsync(email, _aiCancellationTokenSource.Token);
+                    email.AiSummary = classification.Summary;
+                    email.AiCategory = classification.Category;
+                    email.AiDelete = classification.Delete;
+                    email.AiDeleteMotivation = classification.Reason;
+                    await _emailRepository.UpdateEmailAsync(email);
+                    StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
+                }
+                catch (Exception ex)
+                {
+                    StatusText = $"Error generating summary: {ex.Message}"; 
+                    return;
                 }
             }
         }
@@ -438,7 +445,14 @@ public partial class MainViewModel : BaseViewModel
             await popup.CloseAsync(false);
         }    
 
-        StatusText = $"AI processed {i} emails.";
+        if (selectedEmails.Any())
+        {
+            StatusText = $"AI processed {i} selected emails.";
+        }
+        else
+        {
+            StatusText = $"AI processed {i} emails.";
+        }
     }
 
     [RelayCommand]
