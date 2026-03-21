@@ -3,6 +3,7 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
               xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
               xmlns:vm="clr-namespace:Imapster.ViewModels"
+              xmlns:cv="clr-namespace:Imapster.ContentViews"
               x:DataType="vm:MoveFolderPopupViewModel"
               x:TypeArguments="x:String"
               x:Class="Imapster.Popups.MoveFolderPopup"
@@ -11,22 +12,13 @@
         <VerticalStackLayout>
             <Label Text="Move to Folder" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,0,0,20"/>
             
-            <CollectionView ItemsSource="{Binding AvailableFolders}"
-                            SelectedItem="{Binding SelectedFolder}"
-                            SelectionMode="Single"
-                            Margin="0,0,0,10">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:FolderViewModel">
-                        <Border BackgroundColor="{StaticResource Gray600}" StrokeShape="RoundRectangle 6,6,6,6" Padding="12" Margin="0,0,0,8">
-                            <Label Text="{Binding Name}" VerticalOptions="Center" />
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+            <cv:TreeView ItemsSource="{Binding AvailableFolders}"
+                         SelectedItem="{Binding SelectedFolder}"
+                         Margin="0,0,0,10" />
             
             <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,10,0,0">
                 <Button Text="Move" WidthRequest="150" 
-                        BackgroundColor="Green" Clicked="SaveButtonClicked"
+                        BackgroundColor="Green" Clicked="MoveButtonClicked"
                         TextColor="White" 
                         Margin="0,0,10,0" />
                 <Button Text="Cancel" WidthRequest="150"

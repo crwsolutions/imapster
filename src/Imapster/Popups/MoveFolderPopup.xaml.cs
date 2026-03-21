@@ -21,7 +21,7 @@ public partial class MoveFolderPopup : Popup<string>
         }
     }
 
-    private async void SaveButtonClicked(object? sender, EventArgs e)
+    private async void MoveButtonClicked(object? sender, EventArgs e)
     {
         if (BindingContext is MoveFolderPopupViewModel viewModel && viewModel.SelectedFolder == null)
         {

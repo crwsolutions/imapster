@@ -1,3 +1,4 @@
+using Imapster.Extensions;
 using Imapster.Repositories;
 
 namespace Imapster.ViewModels;
@@ -38,13 +39,6 @@ public partial class MoveFolderPopupViewModel : ObservableObject, IQueryAttribut
         if (_folderRepository == null) return;
 
         var folders = await _folderRepository.GetAllFoldersAsync(_accountId);
-
-        foreach (var folder in folders)
-        {
-            if (folder.Id != _sourceFolderId && !folder.IsTrash)
-            {
-                AvailableFolders.Add(folder);
-            }
-        }
+        AvailableFolders = folders.Where(f => f.Id != _sourceFolderId && !f.IsTrash).ToList().BuildHierarchy();
     }
 }
