@@ -38,7 +38,8 @@
             <!-- Left side: Folder Tree View (1/3 width) -->
             <Border Grid.Row="1" Grid.Column="0" BackgroundColor="{StaticResource Gray600}" Margin="0,0,1,0">
                 <cv:TreeView ItemsSource="{Binding Folders}"
-                             SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"/>
+                             SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                             EmptyTrashCommand="{Binding EmptyTrashCommand}"/>
             </Border>
 
             <!-- Right side: Email Grid List (2/3 width) -->

@@ -29,13 +29,24 @@
                                Grid.Column="1"
                                Margin="{Binding IndentLevel, Converter={StaticResource IntToThicknessConverter}}"/>
                         
-                        <!-- Unread Count -->
-                        <!--<Label Text="{Binding UnreadCount}"
-                               FontSize="10"
-                               TextColor="Gray"
+                        <!-- Trash Icon -->
+                        <Label Text="&#xf2ed;" 
+                               FontSize="12"
+                               TextColor="OrangeRed"
                                VerticalOptions="Center"
                                Grid.Column="2"
-                               IsVisible="{Binding UnreadCount, Converter={StaticResource InvertedBoolConverter}}"/>-->
+                               IsVisible="{Binding IsTrash}"
+                               Margin="4,0,0,0"/>
+                        
+                        <!-- Context Menu for Trash -->
+                        <FlyoutBase.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Empty Trash" 
+                                                IsEnabled="{Binding IsTrash}"
+                                                Command="{Binding EmptyTrashCommand, Source={x:Reference Name=ContentView}}"
+                                                CommandParameter="{Binding .}" />
+                            </MenuFlyout>
+                        </FlyoutBase.ContextFlyout>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
