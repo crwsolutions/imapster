@@ -32,7 +32,7 @@
                         <!-- Trash Icon -->
                         <Label Text="&#xf2ed;" 
                                FontSize="12"
-                               TextColor="OrangeRed"
+                               FontFamily="FontAwesomeSolid"
                                VerticalOptions="Center"
                                Grid.Column="2"
                                IsVisible="{Binding IsTrash}"
