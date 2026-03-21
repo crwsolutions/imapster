@@ -14,7 +14,6 @@ namespace Imapster.ContentViews
         private string? _currentSortKey;
         private bool _sortAscending = true;
         private Dictionary<string, List<object?>> _filters = new();
-        private ObservableCollection<IDataGridItem> _displayedItems = new ObservableCollection<IDataGridItem>();
         private int _lastSelectedIndex = -1;
 
         public IEnumerable ItemsSource
@@ -40,7 +39,15 @@ namespace Imapster.ContentViews
 
         public string PreferencesKey { get; set; } = "DefaultDataGrid";
 
-        public ObservableCollection<IDataGridItem> DisplayedItems => _displayedItems;
+        public static readonly BindableProperty DisplayedItemsProperty =
+            BindableProperty.Create(nameof(DisplayedItems), typeof(ObservableCollection<IDataGridItem>), typeof(DataGridView),
+                null, BindingMode.OneWayToSource);
+
+        public ObservableCollection<IDataGridItem> DisplayedItems
+        {
+            get => (ObservableCollection<IDataGridItem>)GetValue(DisplayedItemsProperty);
+            set => SetValue(DisplayedItemsProperty, value);
+        }
 
         public int Count
         {
@@ -88,7 +95,7 @@ namespace Imapster.ContentViews
 
         public void RemoveItem(IDataGridItem item)
         {
-            _displayedItems.Remove(item);
+            DisplayedItems?.Remove(item);
         }
 
         private void RefreshData()
@@ -106,10 +113,11 @@ namespace Imapster.ContentViews
             // Apply sorting
             var sortedItems = ApplySorting(filteredItems);
 
-            _displayedItems = sortedItems.ToObservableCollection();
+            // Set the DisplayedItems property
+            DisplayedItems = sortedItems.ToObservableCollection();
             
             // Set the Count property
-            Count = _displayedItems.Count;
+            Count = DisplayedItems.Count;
 
             // Rebuild the UI
             RebuildHeaders();
@@ -369,7 +377,7 @@ namespace Imapster.ContentViews
 
             // Set the new template and items source
             DataCollectionView.ItemTemplate = dataTemplate;
-            DataCollectionView.ItemsSource = _displayedItems;
+            DataCollectionView.ItemsSource = DisplayedItems;
         }
 
         private void OnSortAscendingClicked(object? sender, EventArgs e)
@@ -412,6 +420,9 @@ namespace Imapster.ContentViews
             {
                 return;
             }
+
+            // Reset selectie bij filteren - voorkomt dat geselecteerde items "in de lucht" blijven
+            DisplayedItems?.ToList().ForEach(item => item.IsSelected = false);
 
             if (selectedValues?.Count > 0)
             {
@@ -524,7 +535,7 @@ namespace Imapster.ContentViews
                 return;
             }
 
-            var index = _displayedItems.IndexOf(rowItem);
+            var index = DisplayedItems?.IndexOf(rowItem) ?? -1;
             if (index < 0)
             {
                 return;
@@ -542,18 +553,14 @@ namespace Imapster.ContentViews
 
                 for (int i = start; i <= end; i++)
                 {
-                    _displayedItems[i].IsSelected = true;
+                    DisplayedItems?[i].IsSelected = true;
                 }
 
                 _lastSelectedIndex = index;
             }
             else // Gewone klik: selecteer alleen deze rij
             {
-                foreach (var item in _displayedItems)
-                {
-                    item.IsSelected = false;
-                }
-
+                DisplayedItems?.ToList().ForEach(item => item.IsSelected = false);
                 rowItem.IsSelected = true;
                 _lastSelectedIndex = index;
             }
@@ -603,18 +610,12 @@ namespace Imapster.ContentViews
 
         private void OnClearSelectionTapped(object? sender, EventArgs e)
         {
-            foreach (var item in _displayedItems)
-            {   
-                item.IsSelected = false;
-            }
+            DisplayedItems?.ToList().ForEach(item => item.IsSelected = false);
         }
 
         private void OnSelectAllTapped(object? sender, EventArgs e)
         {
-            foreach (var item in _displayedItems)
-            {
-                item.IsSelected = true;
-            }
+            DisplayedItems?.ToList().ForEach(item => item.IsSelected = true);
         }
     }
 }

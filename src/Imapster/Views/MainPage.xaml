@@ -43,7 +43,7 @@
             </Border>
 
             <!-- Right side: Email Grid List (2/3 width) -->
-            <cv:DataGridView  ItemsSource="{Binding Emails}" Grid.Column="1" Grid.RowSpan="2" Count="{Binding RowCount}">
+            <cv:DataGridView  ItemsSource="{Binding Emails}" DisplayedItems="{Binding DisplayedItems}" Grid.Column="1" Grid.RowSpan="2" Count="{Binding RowCount}">
                 <cv:DataGridView.Columns>
                     <cv:DataGridColumn Header=" " Key="" Width="20" IsFilterable="False" IsSortable="False">
                         <cv:DataGridColumn.ContentTemplate>

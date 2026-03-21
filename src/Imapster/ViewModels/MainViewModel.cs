@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
+using Imapster.ContentViews;
 using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
@@ -61,6 +62,9 @@ public partial class MainViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial ObservableCollection<EmailViewModel>? Emails { get; set; } = [];
+
+    [ObservableProperty]
+    public partial ObservableCollection<IDataGridItem> DisplayedItems { get; set; } = [];
 
     public MainViewModel(IImapSyncService imapSyncService,
                           IFolderRepository folderRepository,
@@ -377,7 +381,7 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task Ai()
     {
-        if (Emails is null)
+        if (DisplayedItems is null || DisplayedItems.Count == 0)
         {
             return;
         }
@@ -399,14 +403,16 @@ public partial class MainViewModel : BaseViewModel
         });
 
         int i = 0;
-        var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
+        // Use DisplayedItems to only process visible emails
+        var selectedEmails = DisplayedItems.Where(e => e.IsSelected).Cast<EmailViewModel>().ToList();
         if (selectedEmails.Count > 0)
         { 
             StatusText = $"Processing {selectedEmails.Count} selected emails...";
         }
         else
         { 
-            selectedEmails = [.. Emails.Where(e => string.IsNullOrWhiteSpace(e.AiSummary))];
+            // Only process new emails that are visible (filtered)
+            selectedEmails = [.. DisplayedItems.Cast<EmailViewModel>().Where(e => string.IsNullOrWhiteSpace(e.AiSummary))];
             StatusText = $"Processing all new emails ({selectedEmails.Count} emails)...";
         }
 
@@ -530,14 +536,14 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
-        if (Emails is null || SelectedFolder == null)
+        if (DisplayedItems is null || DisplayedItems.Count == 0 || SelectedFolder == null)
         {
             StatusText = "No emails to trash";
             return;
         }
 
-        // Get selected emails
-        var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
+        // Get selected emails from displayed (visible) items only
+        var selectedEmails = DisplayedItems.Where(e => e.IsSelected).Cast<EmailViewModel>().ToList();
         if (selectedEmails.Count == 0)
         {
             StatusText = "No emails selected";
@@ -562,7 +568,7 @@ public partial class MainViewModel : BaseViewModel
             }
 
             // Update row count
-            RowCount = Emails.Count;
+            RowCount = DisplayedItems.Count;
 
             StatusText = $"Moved {selectedEmails.Count} emails to trash";
         }
@@ -585,13 +591,14 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
-        if (Emails is null || SelectedFolder == null)
+        if (DisplayedItems is null || DisplayedItems.Count == 0 || SelectedFolder == null)
         {
             StatusText = "No emails to move";
             return;
         }
 
-        var selectedEmails = Emails.Where(e => e.IsSelected).ToList();
+        // Get selected emails from displayed (visible) items only
+        var selectedEmails = DisplayedItems.Where(e => e.IsSelected).Cast<EmailViewModel>().ToList();
         if (selectedEmails.Count == 0)
         {
             StatusText = "No emails selected";
@@ -624,10 +631,10 @@ public partial class MainViewModel : BaseViewModel
 
                 foreach (var email in selectedEmails.ToList())
                 {
-                    Emails.Remove(email);
+                    Emails!.Remove(email);
                 }
 
-                RowCount = Emails.Count;
+                RowCount = DisplayedItems.Count;
                 StatusText = moveResult;
             }
             else
