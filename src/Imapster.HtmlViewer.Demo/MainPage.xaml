@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:htmlviewer="clr-namespace:Imapster.HtmlViewer;assembly=Imapster.HtmlViewer"
+             x:Class="Imapster.HtmlViewer.Demo.MainPage"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <Label Text="HTML Viewer Demo"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Label Text="HTML Viewer Placeholder"
+                   FontSize="16"
+                   TextColor="Gray" />
+
+            <htmlviewer:HtmlView x:Name="HtmlViewControl" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
