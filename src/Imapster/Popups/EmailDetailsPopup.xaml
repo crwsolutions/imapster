@@ -38,7 +38,7 @@
                 <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
                     <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always"  >
                         <!--<Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />-->
-                        <viewer:SkiaHtmlView Html="{Binding Body, Mode=OneTime}"  />
+                        <viewer:HtmlViewer Html="{Binding Body, Mode=OneTime}"  />
                     </ScrollView>
                 </Border>
 

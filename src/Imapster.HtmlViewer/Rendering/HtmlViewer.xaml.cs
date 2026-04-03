@@ -8,7 +8,7 @@ namespace Imapster.HtmlViewer.Rendering;
 /// <summary>
 /// SkiaSharp-based renderer for HTML content.
 /// </summary>
-public partial class SkiaHtmlView : ContentView
+public partial class HtmlViewer : ContentView
 {
     private readonly LayoutEngine _layoutEngine;
     private readonly RenderContext _renderContext;
@@ -41,7 +41,7 @@ public partial class SkiaHtmlView : ContentView
     public static readonly BindableProperty HtmlProperty = BindableProperty.Create(
         nameof(Html),
         typeof(string),
-        typeof(SkiaHtmlView),
+        typeof(HtmlViewer),
         defaultValue: default(string),
         propertyChanged: OnHtmlChanged);
 
@@ -56,7 +56,7 @@ public partial class SkiaHtmlView : ContentView
 
     private static void OnHtmlChanged(BindableObject bindable, object oldValue, object newValue)
     {
-        if (bindable is SkiaHtmlView view && newValue is string html)
+        if (bindable is HtmlViewer view && newValue is string html)
         {
             view.HtmlContent = html;
         }
@@ -178,9 +178,9 @@ public partial class SkiaHtmlView : ContentView
     public event EventHandler<string>? LinkClicked;
 
     /// <summary>
-    /// Creates a new instance of the SkiaHtmlView.
+    /// Creates a new instance of the HtmlViewer.
     /// </summary>
-    public SkiaHtmlView()
+    public HtmlViewer()
     {
         InitializeComponent();
 
@@ -230,8 +230,7 @@ public partial class SkiaHtmlView : ContentView
         if (_layoutRoot != null)
             desiredHeight = _layoutRoot.Height;
 
-        if (Margin != null)
-            desiredHeight += Margin.Top + Margin.Bottom;
+        desiredHeight += Margin.Top + Margin.Bottom;
 
         return new Size(widthConstraint, desiredHeight);
     }

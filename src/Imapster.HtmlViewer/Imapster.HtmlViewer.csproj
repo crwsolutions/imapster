@@ -32,4 +32,10 @@
 		<PackageReference Include="AngleSharp.Css" Version="1.0.0-beta.167" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Update="Rendering\HtmlViewer.xaml.cs">
+	    <DependentUpon>HtmlViewer.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
 </Project>
