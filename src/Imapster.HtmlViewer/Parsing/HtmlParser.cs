@@ -93,7 +93,11 @@ public sealed partial class HtmlParser
             else if (child is AngleSharp.Dom.IText tn)
             {
                 var normalizedText = NormalizeWhitespace(tn.Text ?? string.Empty, isCurrentPreformatted);
-                if (!string.IsNullOrWhiteSpace(normalizedText))
+                // Treat &nbsp; (non-breaking space, U+00A0) as content, not whitespace
+                // Don't filter out text that contains non-breaking spaces
+                var hasContent = !string.IsNullOrEmpty(normalizedText) && 
+                    (normalizedText.Contains('\u00A0') || !string.IsNullOrWhiteSpace(normalizedText));
+                if (hasContent)
                 {
                     node.Children.Add(HtmlNode.CreateText(normalizedText));
                 }
@@ -385,8 +389,15 @@ public sealed partial class HtmlParser
         if (isPreformatted)
             return text;
 
+        // Preserve non-breaking spaces (U+00A0) while normalizing other whitespace
+        // First, temporarily replace non-breaking spaces with a placeholder
+        var placeholder = "\u0000NBSP\u0000";
+        var withPlaceholder = text.Replace("\u00A0", placeholder);
+        
         // Replace any sequence of whitespace (including newlines, tabs) with a single space
-        // This preserves the single space but collapses multiple spaces/newlines
-        return Regex.Replace(text, @"\s+", " ");
+        var normalized = Regex.Replace(withPlaceholder, @"\s+", " ");
+        
+        // Restore non-breaking spaces
+        return normalized.Replace(placeholder, "\u00A0");
     }
 }

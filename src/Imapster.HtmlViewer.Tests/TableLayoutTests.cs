@@ -362,4 +362,202 @@ public class TableLayoutTests
         Assert.All(dataRow2.Children, cell => 
             Assert.Equal(HtmlElementType.TableCell, cell.HtmlNode?.Type));
     }
+
+    #region Text Wrapping Tests
+
+    [Fact]
+    public void Layout_TableCellWithLongTextAndInlineFormatting_WrapsCorrectly()
+    {
+        // Arrange - lange tekst met inline opmaak in een tabelcel
+        var html = @"
+            <table>
+                <tr>
+                    <td>This paragraph demonstrates <b>bold text</b>, <strong>strong text</strong>, 
+                    <i>italic text</i>, <em>emphasized text</em>, <u>underlined text</u>, 
+                    <mark style='background-color: #FFFF00;'>highlighted text</mark>, 
+                    <small>small text</small>, <del>deleted text</del>, and <ins>inserted text</ins>.</td>
+                </tr>
+            </table>";
+
+        // Act - gebruik smalle breedte om wrapping te forceren
+        var htmlRoot = _htmlParser.Parse(html);
+        var narrowLayoutRoot = _layoutEngine.Layout(htmlRoot, 300); // Zeer smal
+        var wideLayoutRoot = _layoutEngine.Layout(htmlRoot, 800);   // Breed - geen wrapping
+
+        // Debug: Log de werkelijke waarden
+        var narrowTable = narrowLayoutRoot.Children[0];
+        var wideTable = wideLayoutRoot.Children[0];
+        var narrowTbody = narrowTable.Children[0];
+        var wideTbody = wideTable.Children[0];
+        var narrowRow = narrowTbody.Children[0];
+        var wideRow = wideTbody.Children[0];
+        var narrowCell = narrowRow.Children[0];
+        var wideCell = wideRow.Children[0];
+
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"Narrow cell: Height={narrowCell.Height}, Width={narrowCell.Width}, LineBoxes.Count={narrowCell.LineBoxes?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"Wide cell: Height={wideCell.Height}, Width={wideCell.Width}, LineBoxes.Count={wideCell.LineBoxes?.Count ?? 0}");
+
+        // Assert - check if wrapping is happening by looking at LineBoxes
+        Assert.NotNull(narrowCell.LineBoxes);
+        Assert.NotNull(wideCell.LineBoxes);
+        
+        // Narrow cell should have more lines than wide cell
+        Assert.True(narrowCell.LineBoxes.Count > wideCell.LineBoxes.Count,
+            $"Narrow cell should have more lines ({narrowCell.LineBoxes.Count}) than wide cell ({wideCell.LineBoxes.Count}) due to wrapping");
+    }
+
+    [Fact]
+    public void Layout_TableCellWithLongPlainText_WrapsCorrectly()
+    {
+        // Arrange - lange plain text zonder inline opmaak in een tabelcel
+        var html = @"
+            <table>
+                <tr>
+                    <td>This is a verylongwordthatshouldcauseoverflow plain text without any inline formatting that should wrap to multiple lines in a narrow table cell.</td>
+                </tr>
+            </table>";
+
+        // Act - gebruik smalle breedte om wrapping te forceren
+        var htmlRoot = _htmlParser.Parse(html);
+        var narrowLayoutRoot = _layoutEngine.Layout(htmlRoot, 150); // Zeer smal
+        var wideLayoutRoot = _layoutEngine.Layout(htmlRoot, 800);   // Breed - geen wrapping
+
+        // Debug: Log de werkelijke waarden
+        var narrowTable = narrowLayoutRoot.Children[0];
+        var wideTable = wideLayoutRoot.Children[0];
+        var narrowTbody = narrowTable.Children[0];
+        var wideTbody = wideTable.Children[0];
+        var narrowRow = narrowTbody.Children[0];
+        var wideRow = wideTbody.Children[0];
+        var narrowCell = narrowRow.Children[0];
+        var wideCell = wideRow.Children[0];
+
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"Narrow cell: Height={narrowCell.Height}, Width={narrowCell.Width}, LineBoxes.Count={narrowCell.LineBoxes?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"Wide cell: Height={wideCell.Height}, Width={wideCell.Width}, LineBoxes.Count={wideCell.LineBoxes?.Count ?? 0}");
+
+        // Assert - check if wrapping is happening by looking at LineBoxes
+        Assert.NotNull(narrowCell.LineBoxes);
+        Assert.NotNull(wideCell.LineBoxes);
+        
+        // Narrow cell should have more lines than wide cell
+        Assert.True(narrowCell.LineBoxes.Count > wideCell.LineBoxes.Count,
+            $"Narrow cell should have more lines ({narrowCell.LineBoxes.Count}) than wide cell ({wideCell.LineBoxes.Count}) due to wrapping");
+    }
+
+    #endregion
+
+    #region LineBreak Tests
+
+    [Fact]
+    public void Layout_TableCellWithLineBreak_SplitsIntoMultipleLines()
+    {
+        // Arrange - tekst met <br> elementen in een tabelcel
+        var html = @"
+            <table>
+                <tr>
+                    <td>First line<br>Second line<br>Third line</td>
+                </tr>
+            </table>";
+
+        // Act
+        var htmlRoot = _htmlParser.Parse(html);
+        var layoutRoot = _layoutEngine.Layout(htmlRoot, 300);
+
+        // Assert
+        var table = layoutRoot.Children[0];
+        var tbody = table.Children[0];
+        var row = tbody.Children[0];
+        var cell = row.Children[0];
+
+        Assert.NotNull(cell.LineBoxes);
+        // Should have 3 lines due to 2 <br> elements
+        Assert.Equal(3, cell.LineBoxes.Count);
+    }
+
+    [Fact]
+    public void Layout_TableCellWithLineBreakAndLongText_WrapsCorrectly()
+    {
+        // Arrange - lange tekst met <br> elementen in een smalle tabelcel
+        var html = @"
+            <table>
+                <tr>
+                    <td>This is a very long first line that should wrap<br>Second line with <b>bold text</b> that should also wrap<br>Third line with <i>italic text</i></td>
+                </tr>
+            </table>";
+
+        // Act
+        var htmlRoot = _htmlParser.Parse(html);
+        var layoutRoot = _layoutEngine.Layout(htmlRoot, 200);
+
+        // Assert
+        var table = layoutRoot.Children[0];
+        var tbody = table.Children[0];
+        var row = tbody.Children[0];
+        var cell = row.Children[0];
+
+        Assert.NotNull(cell.LineBoxes);
+        // Should have multiple lines due to <br> elements and wrapping
+        Assert.True(cell.LineBoxes.Count >= 3, 
+            $"Expected at least 3 lines, got {cell.LineBoxes.Count}");
+    }
+
+    #endregion
+
+    #region NonBreakingSpace Tests
+
+    [Fact]
+    public void Layout_TableCellWithOnlyNonBreakingSpace_HasPositiveHeight()
+    {
+        // Arrange - cel met alleen &nbsp;
+        var html = @"
+            <table>
+                <tr>
+                    <td>&nbsp;</td>
+                </tr>
+            </table>";
+
+        // Act
+        var htmlRoot = _htmlParser.Parse(html);
+        var layoutRoot = _layoutEngine.Layout(htmlRoot, 300);
+
+        // Assert
+        var table = layoutRoot.Children[0];
+        var tbody = table.Children[0];
+        var row = tbody.Children[0];
+        var cell = row.Children[0];
+
+        // Cell with &nbsp; should have positive height (at least one line)
+        Assert.True(cell.Height > 0, 
+            $"Cell with &nbsp; should have positive height, got {cell.Height}");
+    }
+
+    [Fact]
+    public void Layout_TableCellWithTextAndNonBreakingSpace_HasCorrectHeight()
+    {
+        // Arrange - cel met tekst en &nbsp;
+        var html = @"
+            <table>
+                <tr>
+                    <td>Some text&nbsp;and more text</td>
+                </tr>
+            </table>";
+
+        // Act
+        var htmlRoot = _htmlParser.Parse(html);
+        var layoutRoot = _layoutEngine.Layout(htmlRoot, 300);
+
+        // Assert
+        var table = layoutRoot.Children[0];
+        var tbody = table.Children[0];
+        var row = tbody.Children[0];
+        var cell = row.Children[0];
+
+        // Cell should have positive height
+        Assert.True(cell.Height > 0, 
+            $"Cell with text and &nbsp; should have positive height, got {cell.Height}");
+    }
+
+    #endregion
 }

@@ -361,34 +361,6 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Collects text content from inline children.
-     /// </summary>
-    private string CollectInlineTextContent(List<LayoutNode> inlineChildren)
-    {
-        var textBuilder = new System.Text.StringBuilder();
-
-        foreach (var child in inlineChildren)
-        {
-            if (child.HtmlNode?.Type == HtmlElementType.Text)
-            {
-                textBuilder.Append(child.HtmlNode.TextContent ?? string.Empty);
-            }
-            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
-            {
-                // LineBreak elements insert a newline character to force line break
-                textBuilder.Append('\n');
-            }
-            else if (child.LayoutType == LayoutType.Inline)
-            {
-                // Recursively collect text from inline element children
-                textBuilder.Append(CollectTextFromNode(child));
-            }
-        }
-
-        return textBuilder.ToString();
-    }
-
-    /// <summary>
     /// Recursively collects text content from a node.
     /// </summary>
     private string CollectTextFromNode(LayoutNode node)
@@ -457,56 +429,20 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Layouts a list item node.
-    /// </summary>
-    private void LayoutListItemNode(LayoutNode node, double availableWidth)
-    {
-        // Layout children
-        double totalHeight = 0;
-        double currentY = 0;
-
-        foreach (var child in node.Children)
-        {
-            if (child.LayoutType == LayoutType.Block)
-            {
-                LayoutBlockNode(child, availableWidth);
-                child.X = 0;
-                child.Y = currentY;
-                currentY += child.Height + child.MarginTop + child.MarginBottom;
-                totalHeight += child.Height + child.MarginTop + child.MarginBottom;
-            }
-            else if (child.LayoutType == LayoutType.Inline)
-            {
-                LayoutInlineNode(child, availableWidth);
-                child.X = 0;
-                child.Y = currentY;
-                currentY += child.Height + child.MarginTop + child.MarginBottom;
-                totalHeight += child.Height + child.MarginTop + child.MarginBottom;
-            }
-            else if (child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
-            {
-                LayoutTextNode(child, availableWidth);
-                child.X = 0;
-                child.Y = currentY;
-                currentY += child.Height + child.MarginTop + child.MarginBottom;
-                totalHeight += child.Height + child.MarginTop + child.MarginBottom;
-            }
-        }
-
-        node.Height = totalHeight;
-        node.X = 0;
-        node.Y = 0;
-    }
-
-    /// <summary>
     /// Layouts a text node.
     /// </summary>
     private void LayoutTextNode(LayoutNode node, double availableWidth)
     {
         var text = node.HtmlNode?.TextContent ?? string.Empty;
-        
+
         // Don't trim text - preserve original content for rendering
-        if (string.IsNullOrEmpty(text))
+        // Treat &nbsp; (non-breaking space, U+00A0) as non-empty text
+        // Check if text is empty or contains only regular whitespace (not non-breaking spaces)
+        // A non-breaking space should be considered as content
+        var hasNonEmptyContent = !string.IsNullOrEmpty(text) &&
+            (text.Any(c => c == '\u00A0') || text.Any(c => c != ' ' && c != '\t' && c != '\r' && c != '\n'));
+
+        if (!hasNonEmptyContent)
         {
             node.Height = 0;
             node.Width = 0;
@@ -540,7 +476,7 @@ public sealed class LayoutEngine
 
         // Check if this inline node has only text children (no nested inline elements)
         var hasOnlyTextChildren = node.Children.All(c => c.HtmlNode?.Type == HtmlElementType.Text);
-        
+
         if (hasOnlyTextChildren)
         {
             // Collect all text content from direct text children
@@ -550,11 +486,11 @@ public sealed class LayoutEngine
             // Measure and break into lines
             var lines = BreakTextIntoLines(fullText, node, innerWidth);
             node.LineBoxes = lines;
-            
+
             // Calculate dimensions from line boxes
             node.Height = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
             node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
-            
+
             // Set X positions for text children so they render in sequence
             double currentX = 0;
             foreach (var child in node.Children)
@@ -623,8 +559,12 @@ public sealed class LayoutEngine
                     }
                 }
 
-                // Layout children to get their widths
-                double currentX = 0;
+                // Layout children to get their widths and position them across lines
+                // We need to distribute children across lines based on their text content
+                var childTextMap = new Dictionary<LayoutNode, string>();
+                var childWidths = new Dictionary<LayoutNode, double>();
+                double runningX = 0;
+
                 foreach (var child in node.Children)
                 {
                     if (child.LayoutType == LayoutType.Inline)
@@ -636,8 +576,39 @@ public sealed class LayoutEngine
                         LayoutTextNode(child, innerWidth);
                     }
 
-                    child.X = currentX;
-                    currentX += child.Width;
+                    var childText = child.HtmlNode?.TextContent ?? string.Empty;
+                    childTextMap[child] = childText;
+                    childWidths[child] = child.Width;
+                    runningX += child.Width;
+                }
+
+                // Now position each child on the correct line based on its text position
+                // We need to track character positions across lines and position children accordingly
+                var charPosition = 0;
+
+                foreach (var child in node.Children)
+                {
+                    var childText = childTextMap[child];
+                    var childWidth = childWidths[child];
+                    var childEndPosition = charPosition + childText.Length;
+
+                    // Find which line(s) this child spans
+                    var lineIndex = FindLineForCharacterPosition(charPosition, lines);
+
+                    if (lineIndex >= 0 && lineIndex < lines.Count)
+                    {
+                        var line = lines[lineIndex];
+                        var charOffsetInLine = charPosition - line.StartCharIndex;
+                        var textToMeasure = childText.Length > charOffsetInLine
+                            ? childText.Substring(0, charOffsetInLine)
+                            : childText;
+                        var charOffsetX = MeasureText(textToMeasure, node);
+
+                        child.Y = line.Y;
+                        child.X = line.X + charOffsetX;
+                    }
+
+                    charPosition = childEndPosition;
                 }
 
                 // Set paragraph dimensions from lines
@@ -694,7 +665,7 @@ public sealed class LayoutEngine
         var lineHeight = node.FontSize * 1.2;
 
         // Check if this is a preformatted block
-        var isPreformatted = node.HtmlNode?.Type == HtmlElementType.Pre || 
+        var isPreformatted = node.HtmlNode?.Type == HtmlElementType.Pre ||
                              (node.Parent?.HtmlNode?.Type == HtmlElementType.Pre == true);
 
         if (isPreformatted)
@@ -964,23 +935,25 @@ public sealed class LayoutEngine
 
         // Split by newlines but preserve the content
         var lineTexts = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        
+
         foreach (var lineText in lineTexts)
         {
             if (string.IsNullOrEmpty(lineText))
                 continue;
 
-            var line = new LineBox();
-            line.Text = lineText;
-            line.Width = MeasureText(lineText, node);
-            line.Height = lineHeight;
-            line.Baseline = node.FontSize;
-            line.Y = currentY;
-            line.StartCharIndex = charIndex;
-            line.EndCharIndex = charIndex + lineText.Length;
-            
+            var line = new LineBox
+            {
+                Text = lineText,
+                Width = MeasureText(lineText, node),
+                Height = lineHeight,
+                Baseline = node.FontSize,
+                Y = currentY,
+                StartCharIndex = charIndex,
+                EndCharIndex = charIndex + lineText.Length
+            };
+
             lines.Add(line);
-            
+
             currentY += lineHeight;
             charIndex += lineText.Length + 1; // +1 for the newline character
         }
@@ -1001,7 +974,11 @@ public sealed class LayoutEngine
 
         foreach (var c in text)
         {
-            if (char.IsWhiteSpace(c))
+            // Treat non-breaking space (U+00A0) as a regular character, not whitespace
+            // This ensures &nbsp; entities are rendered with proper width and height
+            var isWhitespace = char.IsWhiteSpace(c) && c != '\u00A0';
+
+            if (isWhitespace)
             {
                 if (currentWord.Length > 0)
                 {
@@ -1138,6 +1115,22 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
+    /// Finds the line index that contains the given character position.
+    /// </summary>
+    private int FindLineForCharacterPosition(int charPosition, List<LineBox> lines)
+    {
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            if (charPosition >= line.StartCharIndex && charPosition < line.EndCharIndex)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
     /// Creates a SkiaSharp font from layout node properties.
     /// </summary>
     private SKTypeface CreateSkiaFont(LayoutNode node)
@@ -1158,7 +1151,9 @@ public sealed class LayoutEngine
     {
         public string CombinedText { get; set; } = string.Empty;
         public List<(int startChar, int endChar, LayoutNode node)> Elements { get; set; } = new();
-        public bool HasContent => !string.IsNullOrEmpty(CombinedText);
+        // Treat &nbsp; (non-breaking space, U+00A0) as content, not whitespace
+        public bool HasContent => !string.IsNullOrEmpty(CombinedText) &&
+            (CombinedText.Contains('\u00A0') || !string.IsNullOrWhiteSpace(CombinedText));
     }
 
     /// <summary>
@@ -1177,6 +1172,12 @@ public sealed class LayoutEngine
                 var text = child.HtmlNode.TextContent ?? string.Empty;
                 textBuilder.Append(text);
                 charIndex += text.Length;
+            }
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+            {
+                // LineBreak elements insert a newline character to force line break
+                textBuilder.Append('\n');
+                charIndex += 1;
             }
             else if (child.LayoutType == LayoutType.Inline)
             {
@@ -1309,5 +1310,4 @@ public sealed class LayoutEngine
             }
         }
     }
-
 }
