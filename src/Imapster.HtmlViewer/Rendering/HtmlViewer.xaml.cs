@@ -16,7 +16,6 @@ public partial class HtmlViewer : ContentView
     private readonly HtmlParser _htmlParser;
     private LayoutNode? _layoutRoot;
     private HtmlNode? _htmlRoot;
-    private bool _isLayoutDirty = true;
     private double _lastMeasuredWidth = -1;
     private double _lastRenderedWidth = -1;
 
@@ -77,7 +76,6 @@ public partial class HtmlViewer : ContentView
             if (_renderContext.FontSize != value)
             {
                 _renderContext.FontSize = value;
-                ExecInvalidateLayout();
             }
         }
     }
@@ -93,7 +91,6 @@ public partial class HtmlViewer : ContentView
             if (_renderContext.FontFamily != value)
             {
                 _renderContext.FontFamily = value;
-                ExecInvalidateLayout();
             }
         }
     }
@@ -185,18 +182,16 @@ public partial class HtmlViewer : ContentView
         if (Math.Abs(widthConstraint - _lastMeasuredWidth) > 0.1)
         {
             _lastMeasuredWidth = widthConstraint;
-            _isLayoutDirty = true;
         }
 
         // Only perform layout if we have valid width and content
-        if (!string.IsNullOrEmpty(_renderContext.HtmlContent) && _isLayoutDirty && widthConstraint != double.PositiveInfinity && widthConstraint > 0)
+        if (!string.IsNullOrEmpty(_renderContext.HtmlContent) && widthConstraint != double.PositiveInfinity && widthConstraint > 0)
         {
             try
             {
                 _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
                 _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)widthConstraint);
                 _lastRenderedWidth = widthConstraint;
-                _isLayoutDirty = false;
             }
             catch { }
         }
@@ -215,24 +210,14 @@ public partial class HtmlViewer : ContentView
         {
             _htmlRoot = null;
             _layoutRoot = null;
-            _isLayoutDirty = true;
             return;
         }
 
-        // Mark layout as dirty; actual layout will be done in OnPaintSurface with correct bounds
-        _isLayoutDirty = true;
         InvalidateRender();
-    }
-
-    private void ExecInvalidateLayout()
-    {
-        _isLayoutDirty = true;
-
     }
 
     private void InvalidateRender()
     {
-
         Dispatcher.Dispatch(() => _canvas?.InvalidateSurface());
     }
 
@@ -256,7 +241,7 @@ public partial class HtmlViewer : ContentView
         }
 
         // Check if width has changed since last render or layout is dirty
-        var needsLayout = Math.Abs(currentWidth - _lastRenderedWidth) > 0.1 || _isLayoutDirty;
+        var needsLayout = Math.Abs(currentWidth - _lastRenderedWidth) > 0.1;
 
         if (needsLayout && !string.IsNullOrEmpty(_renderContext.HtmlContent) && currentWidth > 0)
         {
@@ -268,8 +253,6 @@ public partial class HtmlViewer : ContentView
                 _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)currentWidth);
             }
             catch { }
-
-            _isLayoutDirty = false;
         }
 
         // Always render - either with existing layout or clear canvas
