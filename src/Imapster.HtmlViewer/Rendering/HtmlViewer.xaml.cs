@@ -19,9 +19,6 @@ public partial class HtmlViewer : ContentView
     private double _lastMeasuredWidth = -1;
     private double _lastRenderedWidth = -1;
 
-    /// <summary>
-    /// Bindable property for HTML content.
-    /// </summary>
     public static readonly BindableProperty HtmlProperty = BindableProperty.Create(
         nameof(Html),
         typeof(string),
@@ -29,9 +26,6 @@ public partial class HtmlViewer : ContentView
         null,
         propertyChanged: OnHtmlChanged);
 
-    /// <summary>
-    /// Gets or sets the HTML content to render via a bindable property.
-    /// </summary>
     public string? Html
     {
         get => (string?)GetValue(HtmlProperty);
@@ -47,27 +41,18 @@ public partial class HtmlViewer : ContentView
         }
     }
 
-    /// <summary>
-    /// Gets or sets the text color.
-    /// </summary>
     public Color TextColor
     {
         get => _renderContext.TextColor;
         set => _renderContext.TextColor = value;
     }
 
-    /// <summary>
-    /// Gets or sets the link color.
-    /// </summary>
     public Color LinkColor
     {
         get => _renderContext.LinkColor;
         set => _renderContext.LinkColor = value;
     }
 
-    /// <summary>
-    /// Gets or sets the font size.
-    /// </summary>
     public double FontSize
     {
         get => _renderContext.FontSize;
@@ -80,9 +65,6 @@ public partial class HtmlViewer : ContentView
         }
     }
 
-    /// <summary>
-    /// Gets or sets the font family.
-    /// </summary>
     public string FontFamily
     {
         get => _renderContext.FontFamily;
