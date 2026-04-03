@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OpenAI;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using System.ClientModel;
 
 namespace Imapster
@@ -20,6 +21,7 @@ namespace Imapster
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseSkiaSharp()
                 .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {

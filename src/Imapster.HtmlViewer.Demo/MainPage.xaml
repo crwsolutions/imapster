@@ -2,21 +2,19 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:htmlviewer="clr-namespace:Imapster.HtmlViewer;assembly=Imapster.HtmlViewer"
+             xmlns:skia="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
              x:Class="Imapster.HtmlViewer.Demo.MainPage"
-             BackgroundColor="{StaticResource PageBackgroundColor}">
+             >
 
-    <ScrollView>
+    <ScrollView HorizontalScrollBarVisibility="Never">
         <VerticalStackLayout Spacing="20" Padding="20">
             <Label Text="HTML Viewer Demo"
                    FontSize="24"
                    FontAttributes="Bold"
                    HorizontalOptions="Center" />
 
-            <Label Text="HTML Viewer Placeholder"
-                   FontSize="16"
-                   TextColor="Gray" />
+            <skia:SkiaHtmlView Html="{Binding Html}" />
 
-            <htmlviewer:HtmlView x:Name="HtmlViewControl" />
         </VerticalStackLayout>
     </ScrollView>
 

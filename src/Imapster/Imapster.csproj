@@ -83,6 +83,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\Imapster.HtmlViewer\Imapster.HtmlViewer.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<MauiXaml Update="Converters\Converters.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
