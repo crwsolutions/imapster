@@ -35,10 +35,10 @@
                 <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
 
                 <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
-                <Border StrokeShape="RoundRectangle 6" Background="Silver" Padding="8" StrokeThickness="0">
-                    <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always" >
+                <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
+                    <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always"  >
                         <!--<Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />-->
-                        <viewer:SkiaHtmlView Html="{Binding Body, Mode=OneTime}" />
+                        <viewer:SkiaHtmlView Html="{Binding Body, Mode=OneTime}"  />
                     </ScrollView>
                 </Border>
 
