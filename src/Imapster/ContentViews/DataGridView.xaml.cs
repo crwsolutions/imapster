@@ -327,39 +327,20 @@ namespace Imapster.ContentViews
                     var column = visibleColumns[i];
 
                     // Check if a custom template is provided
-                    if (column.ContentTemplate != null)
+                    if (column.ContentTemplate?.CreateContent() is View view)
                     {
-                        // Use the custom template
-                        var content = column.ContentTemplate.CreateContent();
-                        if (content is View view)
-                        {
-                            view.SetBinding(BindableObject.BindingContextProperty, new Binding(".", BindingMode.OneTime));
-                            Grid.SetColumn(view, i);
-                            rowGrid.Children.Add(view);
-                        }
+                        view.SetBinding(BindingContextProperty, new Binding(".", BindingMode.OneTime));
+                        rowGrid.Add(view, i);
                     }
                     else
                     {
-                        // Fall back to default behavior
-                        // Create a label for the cell content
-                        var cellLabel = new Label()
-                        {
-                            VerticalOptions = LayoutOptions.Center,
-                            HorizontalOptions = LayoutOptions.Start,
-                            LineBreakMode = LineBreakMode.TailTruncation,
-                            Padding = new Thickness(5, 0)
-                        };
-
-                        // Bind the label text to the column's value selector
+                        var cellLabel = new Label() { LineBreakMode = LineBreakMode.TailTruncation, VerticalTextAlignment = TextAlignment.Center };
                         cellLabel.SetBinding(Label.TextProperty, new Binding
                         {
                             Path = column.Key,
                             Mode = BindingMode.OneWay,
                         });
-
-                        // Set the grid column
-                        Grid.SetColumn(cellLabel, i);
-                        rowGrid.Children.Add(cellLabel);
+                        rowGrid.Add(cellLabel, i);
                     }
                 }
 
@@ -367,7 +348,7 @@ namespace Imapster.ContentViews
                 var tapGesture = new TapGestureRecognizer();
                 tapGesture.Tapped += OnRowTapped;
                 rowGrid.GestureRecognizers.Add(tapGesture);
-                rowGrid.SetBinding(Grid.BackgroundProperty, new Binding
+                rowGrid.SetBinding(BackgroundProperty, new Binding
                 {
                     Path = "IsSelected",
                     Converter = new BoolToColorConverter()

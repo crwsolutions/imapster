@@ -55,42 +55,42 @@
                     <cv:DataGridColumn Header="From" Key="From" Width="200">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding From, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding From, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="To" Key="To" Width="200">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding To, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding To, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="Date" Key="Date" Width="100" IsFilterable="False">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding Date, StringFormat='{0:yyyy-MM-dd}', Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalOptions="Center" HorizontalOptions="Center" />
+                                <Label Text="{Binding Date, StringFormat='{0:yyyy-MM-dd}', Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="Center" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="Size" Key="Size" Width="100" IsFilterable="False">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding FormattedSize, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalOptions="Center" HorizontalOptions="End" />
+                                <Label Text="{Binding FormattedSize, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="End" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="Attachement" Key="HasAttachments" Width="100" IsFilterable="False">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="&#xf0c6;" IsVisible="{Binding HasAttachments, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" FontFamily="FontAwesomeSolid" VerticalOptions="Center" HorizontalOptions="Center" />
+                                <Label Text="&#xf0c6;" IsVisible="{Binding HasAttachments, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" FontFamily="FontAwesomeSolid" HorizontalOptions="Center" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="Topic" Key="Subject" IsFilterable="False" Width="400">
                         <cv:DataGridColumn.ContentTemplate>
                             <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding Subject, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Subject, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                             </DataTemplate>
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
