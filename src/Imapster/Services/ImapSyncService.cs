@@ -77,9 +77,9 @@ public class ImapSyncService : IImapSyncService
             if (newUniqueIds.Count > 0)
             {
                 _logger.LogInformation("Found {Count} new emails to sync", newUniqueIds.Count);
-                var newMessages = await folder.FetchAsync(newUniqueIds, 
-                    MessageSummaryItems.UniqueId | 
-                    MessageSummaryItems.Envelope | 
+                var newMessages = await folder.FetchAsync(newUniqueIds,
+                    MessageSummaryItems.UniqueId |
+                    MessageSummaryItems.Envelope |
                     MessageSummaryItems.Flags |
                     MessageSummaryItems.Size |
                     MessageSummaryItems.BodyStructure,

@@ -1,11 +1,10 @@
-using Microsoft.Maui.Graphics;
 using SkiaSharp;
 
 namespace Imapster.HtmlViewer.Rendering;
 
-public static class SkiaExtensions
+internal static class SkiaExtensions
 {
-    public static SKColor ParseColorString(this string colorString)
+    internal static SKColor ParseColorString(this string colorString)
     {
         if (colorString.StartsWith("#"))
         {
@@ -33,22 +32,31 @@ public static class SkiaExtensions
 
         return colorString.ToLowerInvariant() switch
         {
-            "black" => SKColors.Black, "white" => SKColors.White,
-            "red" => SKColors.Red, "green" => SKColors.Green,
-            "blue" => SKColors.Blue, "yellow" => SKColors.Yellow,
-            "cyan" => SKColors.Cyan, "magenta" => SKColors.Magenta,
-            "gray" or "grey" => SKColors.Gray, "silver" => SKColors.Silver,
-            "maroon" => SKColors.Maroon, "olive" => SKColors.Olive,
-            "lime" => SKColors.Lime, "aqua" => SKColors.Aqua,
-            "teal" => SKColors.Teal, "navy" => SKColors.Navy,
-            "fuchsia" => SKColors.Fuchsia, "purple" => SKColors.Purple,
+            "black" => SKColors.Black,
+            "white" => SKColors.White,
+            "red" => SKColors.Red,
+            "green" => SKColors.Green,
+            "blue" => SKColors.Blue,
+            "yellow" => SKColors.Yellow,
+            "cyan" => SKColors.Cyan,
+            "magenta" => SKColors.Magenta,
+            "gray" or "grey" => SKColors.Gray,
+            "silver" => SKColors.Silver,
+            "maroon" => SKColors.Maroon,
+            "olive" => SKColors.Olive,
+            "lime" => SKColors.Lime,
+            "aqua" => SKColors.Aqua,
+            "teal" => SKColors.Teal,
+            "navy" => SKColors.Navy,
+            "fuchsia" => SKColors.Fuchsia,
+            "purple" => SKColors.Purple,
             _ => SKColors.Black
         };
     }
 
-    public static SKColor ParseColorStringOrDefault(this string? colorString) => colorString?.ParseColorString() ?? SKColors.Transparent;
+    internal static SKColor ParseColorStringOrDefault(this string? colorString) => colorString?.ParseColorString() ?? SKColors.Transparent;
 
-    public static SKColor ParseColorString(this Color color)
+    internal static SKColor ParseColorString(this Color color)
     {
         return new SKColor(
             (byte)(color.Red * 255),
@@ -58,12 +66,12 @@ public static class SkiaExtensions
         );
     }
 
-    public static void Clear(this SKCanvas canvas, SKColor color) => canvas.Clear(color);
+    internal static void Clear(this SKCanvas canvas, SKColor color) => canvas.Clear(color);
 
-    public static void DrawRect(this SKCanvas canvas, float x, float y, float width, float height, SKColor color)
+    internal static void DrawRect(this SKCanvas canvas, float x, float y, float width, float height, SKColor color)
         => canvas.DrawRect(x, y, width, height, new SKPaint { Color = color });
 
-    public static void DrawLine(this SKCanvas canvas, float x1, float y1, float x2, float y2, SKColor color, float strokeWidth = 1)
+    internal static void DrawLine(this SKCanvas canvas, float x1, float y1, float x2, float y2, SKColor color, float strokeWidth = 1)
     {
         var paint = new SKPaint { Color = color, StrokeWidth = strokeWidth, IsAntialias = true };
         canvas.DrawLine(x1, y1, x2, y2, paint);

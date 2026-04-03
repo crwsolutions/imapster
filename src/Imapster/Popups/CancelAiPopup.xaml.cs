@@ -1,5 +1,3 @@
-using CommunityToolkit.Maui.Views;
-
 namespace Imapster.Popups;
 
 public partial class CancelAiPopup

@@ -1,7 +1,5 @@
 using Imapster.Repositories;
-using Imapster.ViewModels;
 using Microsoft.Extensions.AI;
-using MimeKit;
 
 using System.Text;
 using System.Text.Json;
@@ -105,7 +103,7 @@ public sealed class EmailAiService
     public async Task<EmailClassificationResult> ClassifyEmailAsync(EmailViewModel email, CancellationToken cancellationToken = default)
     {
         var systemPrompt = await GetEffectivePromptAsync();
-        
+
         List<ChatMessage> chatHistory = [];
         chatHistory.Add(new(ChatRole.System, systemPrompt));
         chatHistory.Add(new(ChatRole.User, GetMessage(email)));
@@ -158,7 +156,7 @@ public sealed class EmailAiService
         var attachmentsInfo = !string.IsNullOrWhiteSpace(email.Attachments)
             ? $"Attachments: {email.Attachments}"
             : "No attachments";
-            
+
         var ageInfo = GetAgeInfo(email.Date);
         var classification = ClassifyEmailAge(email.Date);
 
@@ -180,10 +178,10 @@ public sealed class EmailAiService
     {
         var now = DateTime.Now;
         var diff = now - emailDate;
-        
+
         var years = diff.TotalDays / 365.25;
         var months = diff.TotalDays / 30.44;
-        
+
         if (years >= 1)
         {
             var fullYears = (int)years;
@@ -207,7 +205,7 @@ public sealed class EmailAiService
         var now = DateTime.Now;
         var diff = now - emailDate;
         var months = (int)(diff.TotalDays / 30.44);
-        
+
         return months switch
         {
             < 3 => "nieuw",

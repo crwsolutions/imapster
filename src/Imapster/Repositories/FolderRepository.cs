@@ -27,7 +27,7 @@ public class FolderRepository : IFolderRepository
             new { Id = id, AccountId = accountId });
         if (folder != null)
             return folder;
-            
+
         throw new KeyNotFoundException($"Folder with ID '{id}' not found for account {accountId}.");
     }
 

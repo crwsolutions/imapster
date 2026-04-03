@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace Imapster.HtmlViewer.Demo;
+﻿namespace Imapster.HtmlViewer.Demo;
 
 public partial class App : Application
 {

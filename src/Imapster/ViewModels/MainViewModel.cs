@@ -50,7 +50,7 @@ public partial class MainViewModel : BaseViewModel
     {
         // When account changes, reload folders and emails for that account
         if (value is null || _isLoading) return;
-        
+
         SelectedAccount = value;
         SelectedFolder = null;
         Folders.Clear();
@@ -141,7 +141,7 @@ public partial class MainViewModel : BaseViewModel
                 await LoadFoldersFromLocalAsync();
 
                 if (SelectedFolder is null)
-                { 
+                {
                     return;
                 }
             }
@@ -188,7 +188,7 @@ public partial class MainViewModel : BaseViewModel
     {
         Folders.Clear();
         var hierarchy = flatFolders.BuildHierarchy();
-        
+
         foreach (var folder in hierarchy)
         {
             Folders.Add(folder);
@@ -230,7 +230,7 @@ public partial class MainViewModel : BaseViewModel
     {
         var popup = new AddAccountPopup();
         var result = await Shell.Current.ShowPopupAsync<bool>(popup);
-        
+
         if (result.Result is true)
         {
             // Reload accounts
@@ -240,7 +240,7 @@ public partial class MainViewModel : BaseViewModel
             {
                 Accounts.Add(account);
             }
-            
+
             StatusText = "Account added successfully";
         }
     }
@@ -253,10 +253,10 @@ public partial class MainViewModel : BaseViewModel
             StatusText = "Please select an account to edit";
             return;
         }
-        
+
         var popup = new EditAccountPopup(SelectedAccount);
         var result = await Shell.Current.ShowPopupAsync<bool>(popup);
-        
+
         if (result.Result is true)
         {
             // Reload accounts
@@ -266,7 +266,7 @@ public partial class MainViewModel : BaseViewModel
             {
                 Accounts.Add(account);
             }
-            
+
             StatusText = "Account updated successfully";
         }
     }
@@ -331,7 +331,7 @@ public partial class MainViewModel : BaseViewModel
         // Cancel any ongoing classification first
         _aiCancellationTokenSource?.Cancel();
         _aiCancellationTokenSource?.Dispose();
-        
+
         IsBusy = true;
         _aiCancellationTokenSource = new CancellationTokenSource();
 
@@ -348,11 +348,11 @@ public partial class MainViewModel : BaseViewModel
         // Use DisplayedItems to only process visible emails
         var selectedEmails = DisplayedItems.Where(e => e.IsSelected).Cast<EmailViewModel>().ToList();
         if (selectedEmails.Count > 0)
-        { 
+        {
             StatusText = $"Processing {selectedEmails.Count} selected emails...";
         }
         else
-        { 
+        {
             // Only process new emails that are visible (filtered)
             selectedEmails = [.. DisplayedItems.Cast<EmailViewModel>().Where(e => string.IsNullOrWhiteSpace(e.AiSummary))];
             StatusText = $"Processing all new emails ({selectedEmails.Count} emails)...";
@@ -363,7 +363,7 @@ public partial class MainViewModel : BaseViewModel
             foreach (var email in selectedEmails)
             {
                 _aiCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                
+
                 i++;
                 try
                 {
@@ -377,7 +377,7 @@ public partial class MainViewModel : BaseViewModel
                 }
                 catch (Exception ex)
                 {
-                    StatusText = $"Error generating summary: {ex.Message}"; 
+                    StatusText = $"Error generating summary: {ex.Message}";
                     return;
                 }
             }
@@ -391,7 +391,7 @@ public partial class MainViewModel : BaseViewModel
             IsBusy = false;
             // Close the popup
             await popup.CloseAsync(false);
-        }    
+        }
 
         if (selectedEmails.Any())
         {

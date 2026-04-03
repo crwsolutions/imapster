@@ -1,1 +1,0 @@
-global using static Imapster.HtmlViewer.Rendering.ColorExtensions;

@@ -1,9 +1,6 @@
 ﻿using Imapster.Popups;
 using Imapster.Repositories;
-using Imapster.ViewModels;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
-using OllamaSharp;
 using OpenAI;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using System.ClientModel;

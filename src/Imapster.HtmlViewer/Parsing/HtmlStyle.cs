@@ -1,7 +1,3 @@
-using System.Globalization;
-using AngleSharp.Css.Dom;
-using AngleSharp.Css.Parser;
-
 namespace Imapster.HtmlViewer.Parsing;
 
 /// <summary>

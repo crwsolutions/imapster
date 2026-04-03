@@ -1,4 +1,3 @@
-using Microsoft.Maui.Graphics;
 using SkiaSharp;
 
 namespace Imapster.HtmlViewer.Rendering;

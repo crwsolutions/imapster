@@ -1,4 +1,3 @@
-using Imapster.ContentViews;
 using System.Windows.Input;
 
 namespace Imapster.ContentViews;

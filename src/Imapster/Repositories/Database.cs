@@ -1,6 +1,5 @@
-using Dapper;
-using Microsoft.Data.Sqlite;
 using Imapster.Services;
+using Microsoft.Data.Sqlite;
 
 namespace Imapster.Repositories;
 
@@ -93,7 +92,7 @@ internal static class Database
         // Insert default rules with fixed IDs using constants from EmailAiService
         var verwijderRegels = EmailAiService.DefaultVerwijderRegels;
         var behoudenRegels = EmailAiService.DefaultBehoudenRegels;
-        
+
         using var command5 = new SqliteCommand(
             $$"""
             INSERT INTO PromptTemplates (Id, Prompt) VALUES 

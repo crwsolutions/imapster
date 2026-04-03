@@ -115,8 +115,8 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             .Where(a => !string.IsNullOrWhiteSpace(a.ContentDisposition?.FileName))
             .Select(a => a.ContentDisposition!.FileName!)
             .ToList();
-        var attachmentsString = attachments.Count > 0 
-            ? string.Join(",", attachments) 
+        var attachmentsString = attachments.Count > 0
+            ? string.Join(",", attachments)
             : null;
 
         return new EmailViewModel(
@@ -168,13 +168,13 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         // Cancel any ongoing classification first
         _cancellationTokenSource?.Cancel();
         _cancellationTokenSource?.Dispose();
-        
+
         Status = "Running AI classification...";
         IsBusy = true;
 
         _emailAiService ??= App.Services.GetRequiredService<EmailAiService>();
         _emailRepository ??= App.Services.GetRequiredService<IEmailRepository>();
-        
+
         _cancellationTokenSource = new CancellationTokenSource();
 
         // Show cancel popup
@@ -198,7 +198,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         {
             Status = "AI classification cancelled";
         }
-        catch(Exception exception)
+        catch (Exception exception)
         {
             Status = $"AI classification failed: {exception.Message}";
         }
@@ -216,7 +216,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         Status = "AI classification cancelled";
     }
 
-    public bool Equals(EmailViewModel? other) => 
+    public bool Equals(EmailViewModel? other) =>
         other is not null &&
         Id == other.Id &&
         FolderId == other.FolderId &&

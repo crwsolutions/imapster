@@ -28,7 +28,7 @@ public partial class PromptRepository : IPromptRepository
         var result = await connection.QueryFirstOrDefaultAsync<PromptTemplate>(sql, new { Id = id });
         if (result != null)
             return result;
-            
+
         throw new KeyNotFoundException($"Prompt template with ID {id} not found.");
     }
 

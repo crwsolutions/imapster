@@ -72,7 +72,7 @@ namespace Imapster.ContentViews
                 observableCollection.CollectionChanged += (s, e) =>
                 {
                     if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is not null)
-                    { 
+                    {
                         foreach (var item in e.OldItems)
                         {
                             if (item is IDataGridItem dataGridItem)
@@ -115,7 +115,7 @@ namespace Imapster.ContentViews
 
             // Set the DisplayedItems property
             DisplayedItems = sortedItems.ToObservableCollection();
-            
+
             // Set the Count property
             Count = DisplayedItems.Count;
 
@@ -491,7 +491,7 @@ namespace Imapster.ContentViews
             {
                 var state = JsonSerializer.Deserialize<DataGridState>(stateJson);
                 if (state is not null)
-                { 
+                {
                     ApplyState(state);
                 }
             }

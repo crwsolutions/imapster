@@ -194,7 +194,7 @@ public class TableLayoutTests
         // Each cell should have positive width
         foreach (var cell in row.Children)
         {
-            Assert.True(cell.Width > 0, 
+            Assert.True(cell.Width > 0,
                 $"Cell '{cell.HtmlNode?.TextContent}' should have positive width");
         }
     }
@@ -262,7 +262,7 @@ public class TableLayoutTests
             var prevRow = tbody.Children[i - 1];
             var currRow = tbody.Children[i];
 
-            Assert.True(currRow.Y >= prevRow.Y, 
+            Assert.True(currRow.Y >= prevRow.Y,
                 $"Row {i} should be at or below row {i - 1}");
         }
     }
@@ -303,7 +303,7 @@ public class TableLayoutTests
             var prevCell = row.Children[i - 1];
             var currCell = row.Children[i];
 
-            Assert.True(currCell.X >= prevCell.X, 
+            Assert.True(currCell.X >= prevCell.X,
                 $"Cell {i} should be at or to the right of cell {i - 1}");
         }
     }
@@ -348,18 +348,18 @@ public class TableLayoutTests
         // First row should have header cells
         var headerRow = tbody.Children[0];
         Assert.Equal(3, headerRow.Children.Count);
-        Assert.All(headerRow.Children, cell => 
+        Assert.All(headerRow.Children, cell =>
             Assert.Equal(HtmlElementType.TableHeaderCell, cell.HtmlNode?.Type));
 
         // Second and third rows should have regular cells
         var dataRow1 = tbody.Children[1];
         Assert.Equal(3, dataRow1.Children.Count);
-        Assert.All(dataRow1.Children, cell => 
+        Assert.All(dataRow1.Children, cell =>
             Assert.Equal(HtmlElementType.TableCell, cell.HtmlNode?.Type));
 
         var dataRow2 = tbody.Children[2];
         Assert.Equal(3, dataRow2.Children.Count);
-        Assert.All(dataRow2.Children, cell => 
+        Assert.All(dataRow2.Children, cell =>
             Assert.Equal(HtmlElementType.TableCell, cell.HtmlNode?.Type));
     }
 
@@ -401,7 +401,7 @@ public class TableLayoutTests
         // Assert - check if wrapping is happening by looking at LineBoxes
         Assert.NotNull(narrowCell.LineBoxes);
         Assert.NotNull(wideCell.LineBoxes);
-        
+
         // Narrow cell should have more lines than wide cell
         Assert.True(narrowCell.LineBoxes.Count > wideCell.LineBoxes.Count,
             $"Narrow cell should have more lines ({narrowCell.LineBoxes.Count}) than wide cell ({wideCell.LineBoxes.Count}) due to wrapping");
@@ -440,7 +440,7 @@ public class TableLayoutTests
         // Assert - check if wrapping is happening by looking at LineBoxes
         Assert.NotNull(narrowCell.LineBoxes);
         Assert.NotNull(wideCell.LineBoxes);
-        
+
         // Narrow cell should have more lines than wide cell
         Assert.True(narrowCell.LineBoxes.Count > wideCell.LineBoxes.Count,
             $"Narrow cell should have more lines ({narrowCell.LineBoxes.Count}) than wide cell ({wideCell.LineBoxes.Count}) due to wrapping");
@@ -499,7 +499,7 @@ public class TableLayoutTests
 
         Assert.NotNull(cell.LineBoxes);
         // Should have multiple lines due to <br> elements and wrapping
-        Assert.True(cell.LineBoxes.Count >= 3, 
+        Assert.True(cell.LineBoxes.Count >= 3,
             $"Expected at least 3 lines, got {cell.LineBoxes.Count}");
     }
 
@@ -529,7 +529,7 @@ public class TableLayoutTests
         var cell = row.Children[0];
 
         // Cell with &nbsp; should have positive height (at least one line)
-        Assert.True(cell.Height > 0, 
+        Assert.True(cell.Height > 0,
             $"Cell with &nbsp; should have positive height, got {cell.Height}");
     }
 
@@ -555,7 +555,7 @@ public class TableLayoutTests
         var cell = row.Children[0];
 
         // Cell should have positive height
-        Assert.True(cell.Height > 0, 
+        Assert.True(cell.Height > 0,
             $"Cell with text and &nbsp; should have positive height, got {cell.Height}");
     }
 

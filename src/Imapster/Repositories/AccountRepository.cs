@@ -6,12 +6,12 @@ namespace Imapster.Repositories;
 public class AccountRepository : IAccountRepository
 {
     private readonly string _dbPath;
-    
+
     public AccountRepository()
     {
         _dbPath = Database.DbPath;
     }
-    
+
     public async Task<List<ImapAccountViewModel>> GetAllAccountsAsync()
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -28,7 +28,7 @@ public class AccountRepository : IAccountRepository
             new { Id = id });
         if (account != null)
             return account;
-            
+
         throw new KeyNotFoundException($"Account with ID '{id}' not found.");
     }
 
@@ -47,7 +47,7 @@ public class AccountRepository : IAccountRepository
             "UPDATE Accounts SET Name = @Name, Server = @Server, Port = @Port, UseSsl = @UseSsl, Username = @Username, Password = @Password WHERE Id = @Id",
             account);
     }
-    
+
     public async Task DeleteAccountAsync(string id)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");

@@ -1140,7 +1140,7 @@ public class LayoutEngineTests
         // With narrow width (300px), the paragraph should be significantly taller than with wide width (800px)
         // because text should wrap to multiple lines
         // Expected: narrow should be at least 2-3x taller than wide
-        Assert.True(narrowParagraph.Height > wideParagraph.Height * 1.5, 
+        Assert.True(narrowParagraph.Height > wideParagraph.Height * 1.5,
             $"Narrow paragraph ({narrowParagraph.Height}px) should be significantly taller than wide ({wideParagraph.Height}px) due to wrapping");
     }
 

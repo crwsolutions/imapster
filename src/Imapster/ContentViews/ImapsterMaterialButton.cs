@@ -1,5 +1,5 @@
-﻿using System.Windows.Input;
-using Microsoft.Maui.Controls.Shapes;
+﻿using Microsoft.Maui.Controls.Shapes;
+using System.Windows.Input;
 
 namespace Imapster.ContentViews;
 

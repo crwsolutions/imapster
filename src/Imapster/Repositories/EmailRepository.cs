@@ -20,7 +20,7 @@ public class EmailRepository : IEmailRepository
             new { Id = id, AccountId = accountId, FolderId = folderId });
         if (email != null)
             return email;
-            
+
         throw new KeyNotFoundException($"Email with ID {id} not found in folder {folderId} for account {accountId}.");
     }
 

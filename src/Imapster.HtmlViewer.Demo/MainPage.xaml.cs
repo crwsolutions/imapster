@@ -1,5 +1,4 @@
-﻿using Imapster.HtmlViewer;
-using Imapster.HtmlViewer.Demo.ViewModels;
+﻿using Imapster.HtmlViewer.Demo.ViewModels;
 
 namespace Imapster.HtmlViewer.Demo;
 

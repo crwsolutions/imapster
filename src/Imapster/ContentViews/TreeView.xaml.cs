@@ -1,7 +1,5 @@
 using System.Collections;
 using System.Windows.Input;
-using CommunityToolkit.Maui.Core;
-using Microsoft.Maui.Controls;
 
 namespace Imapster.ContentViews;
 

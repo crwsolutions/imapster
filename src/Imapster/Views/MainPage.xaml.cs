@@ -1,6 +1,4 @@
-﻿using Imapster.ViewModels;
-
-namespace Imapster.Views;
+﻿namespace Imapster.Views;
 
 public partial class MainPage : ContentPage
 {

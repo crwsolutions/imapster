@@ -1,5 +1,3 @@
-using Imapster.ViewModels;
-
 namespace Imapster.Repositories;
 
 public interface IAccountRepository

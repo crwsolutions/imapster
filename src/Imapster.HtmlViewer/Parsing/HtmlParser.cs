@@ -95,7 +95,7 @@ public sealed partial class HtmlParser
                 var normalizedText = NormalizeWhitespace(tn.Text ?? string.Empty, isCurrentPreformatted);
                 // Treat &nbsp; (non-breaking space, U+00A0) as content, not whitespace
                 // Don't filter out text that contains non-breaking spaces
-                var hasContent = !string.IsNullOrEmpty(normalizedText) && 
+                var hasContent = !string.IsNullOrEmpty(normalizedText) &&
                     (normalizedText.Contains('\u00A0') || !string.IsNullOrWhiteSpace(normalizedText));
                 if (hasContent)
                 {
@@ -393,10 +393,10 @@ public sealed partial class HtmlParser
         // First, temporarily replace non-breaking spaces with a placeholder
         var placeholder = "\u0000NBSP\u0000";
         var withPlaceholder = text.Replace("\u00A0", placeholder);
-        
+
         // Replace any sequence of whitespace (including newlines, tabs) with a single space
         var normalized = Regex.Replace(withPlaceholder, @"\s+", " ");
-        
+
         // Restore non-breaking spaces
         return normalized.Replace(placeholder, "\u00A0");
     }

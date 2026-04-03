@@ -1,5 +1,5 @@
-﻿using Imapster.Services;
-using Imapster.Repositories;
+﻿using Imapster.Repositories;
+using Imapster.Services;
 
 internal static class AddViewsExtension
 {
@@ -9,13 +9,13 @@ internal static class AddViewsExtension
         builder.Services.AddSingleton<IFolderRepository, FolderRepository>();
         builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
         builder.Services.AddSingleton<IAccountRepository, AccountRepository>();
-        
+
         // Register services
         builder.Services.AddSingleton<IImapSyncService, ImapSyncService>();
-        
+
         // Register views and view models
         builder.Services.AddTransient<MainPage, MainViewModel>();
-        
+
         builder.Services.AddTransient<EmailAiService>();
 
         return builder;

@@ -7,7 +7,7 @@ public partial class MoveFolderPopup : Popup<string>
     public MoveFolderPopup(MoveFolderPopupViewModel viewModel)
     {
         InitializeComponent();
-        
+
         BindingContext = viewModel;
 
         Opened += HandlePopupOpened;

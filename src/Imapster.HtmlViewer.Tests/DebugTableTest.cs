@@ -1,4 +1,3 @@
-using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
 using Xunit;
 
@@ -22,23 +21,23 @@ public class DebugTableTest
             </table>";
 
         var htmlRoot = htmlParser.Parse(html);
-        
+
         // Debug output
         System.Console.WriteLine($"Root Type: {htmlRoot.Type}");
         System.Console.WriteLine($"Root Children Count: {htmlRoot.Children.Count}");
-        
+
         for (int i = 0; i < htmlRoot.Children.Count; i++)
         {
             var child = htmlRoot.Children[i];
             System.Console.WriteLine($"  Child[{i}] Type: {child.Type}, TagName: {child.TagName}");
             System.Console.WriteLine($"    Child[{i}] Children Count: {child.Children.Count}");
-            
+
             for (int j = 0; j < child.Children.Count; j++)
             {
                 var grandchild = child.Children[j];
                 System.Console.WriteLine($"      Grandchild[{j}] Type: {grandchild.Type}, TagName: {grandchild.TagName}");
                 System.Console.WriteLine($"        Grandchild[{j}] Children Count: {grandchild.Children.Count}");
-                
+
                 for (int k = 0; k < grandchild.Children.Count; k++)
                 {
                     var greatGrandchild = grandchild.Children[k];
@@ -46,7 +45,7 @@ public class DebugTableTest
                 }
             }
         }
-        
+
         Assert.True(true); // Just to make the test pass
     }
 }

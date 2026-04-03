@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Imapster.ContentViews
 {
     public class DataGridState
