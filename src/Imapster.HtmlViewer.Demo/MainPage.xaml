@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Imapster.HtmlViewer.Demo.ViewModels"
              xmlns:htmlviewer="clr-namespace:Imapster.HtmlViewer;assembly=Imapster.HtmlViewer"
-             xmlns:skia="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
+             xmlns:html="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
              x:Class="Imapster.HtmlViewer.Demo.MainPage"
-             >
+             x:DataType="vm:MainViewModel">
 
     <ScrollView HorizontalScrollBarVisibility="Never">
         <VerticalStackLayout Spacing="20" Padding="20">
@@ -13,8 +14,7 @@
                    FontAttributes="Bold"
                    HorizontalOptions="Center" />
 
-            <skia:HtmlViewer Html="{Binding Html}" />
-
+            <html:HtmlViewer Html="{Binding Html, Mode=OneTime}" BackgroundColor="White" />
         </VerticalStackLayout>
     </ScrollView>
 

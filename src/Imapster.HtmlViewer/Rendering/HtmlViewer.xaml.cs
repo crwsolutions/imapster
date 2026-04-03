@@ -1,6 +1,7 @@
 using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
 using SkiaSharp;
+using System.Diagnostics;
 using SKPaintSurfaceEventArgs = SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs;
 
 namespace Imapster.HtmlViewer.Rendering;
@@ -20,29 +21,13 @@ public partial class HtmlViewer : ContentView
     private double _lastRenderedWidth = -1;
 
     /// <summary>
-    /// Gets or sets the HTML content to render.
-    /// </summary>
-    public string? HtmlContent
-    {
-        get => _renderContext.HtmlContent;
-        set
-        {
-            if (_renderContext.HtmlContent != value)
-            {
-                _renderContext.HtmlContent = value;
-                ParseAndLayout();
-            }
-        }
-    }
-
-    /// <summary>
     /// Bindable property for HTML content.
     /// </summary>
     public static readonly BindableProperty HtmlProperty = BindableProperty.Create(
         nameof(Html),
         typeof(string),
         typeof(HtmlViewer),
-        defaultValue: default(string),
+        null,
         propertyChanged: OnHtmlChanged);
 
     /// <summary>
@@ -58,17 +43,9 @@ public partial class HtmlViewer : ContentView
     {
         if (bindable is HtmlViewer view && newValue is string html)
         {
-            view.HtmlContent = html;
+            view._renderContext.HtmlContent = html;
+            view.ParseAndLayout();
         }
-    }
-
-    /// <summary>
-    /// Gets or sets the background color.
-    /// </summary>
-    public new Color BackgroundColor
-    {
-        get => _renderContext.BackgroundColor;
-        set => _renderContext.BackgroundColor = value;
     }
 
     /// <summary>
@@ -198,13 +175,10 @@ public partial class HtmlViewer : ContentView
         FontFamily = "Arial";
     }
 
-    protected override void OnHandlerChanging(HandlerChangingEventArgs e)
-    {
-        base.OnHandlerChanging(e);
-    }
-
     protected override Size MeasureOverride(double widthConstraint, double heightConstraint)
     {
+        Debug.WriteLine($"MeasureOverride called with widthConstraint: {widthConstraint}, heightConstraint: {heightConstraint}");
+
         double desiredHeight = MinimumHeightRequest;
 
         // Check if width constraint has changed
@@ -266,6 +240,8 @@ public partial class HtmlViewer : ContentView
     {
         if (e.Surface == null)
             return;
+
+        Debug.WriteLine($"OnPaintSurface called with canvas size: {e.Surface.Canvas.DeviceClipBounds.Width}x{e.Surface.Canvas.DeviceClipBounds.Height}");
 
         // Get the actual rendered width from bounds
         var currentWidth = Bounds.Width;
@@ -335,7 +311,7 @@ public partial class HtmlViewer : ContentView
 
     private void Render(SKCanvas canvas)
     {
-        canvas.Clear(_renderContext.BackgroundColor.ParseColorString());
+        canvas.Clear(BackgroundColor.ParseColorString());
         if (_layoutRoot == null)
             return;
 

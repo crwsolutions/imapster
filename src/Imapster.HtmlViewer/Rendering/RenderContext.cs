@@ -21,11 +21,6 @@ public sealed class RenderContext
     public double AvailableHeight { get; set; }
 
     /// <summary>
-    /// Gets or sets the background color.
-    /// </summary>
-    public Color BackgroundColor { get; set; } = Colors.White;
-
-    /// <summary>
     /// Gets or sets the default text color.
     /// </summary>
     public Color TextColor { get; set; } = Colors.Black;
