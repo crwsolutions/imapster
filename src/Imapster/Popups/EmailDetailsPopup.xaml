@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
              xmlns:vm="clr-namespace:Imapster.ViewModels"
+             xmlns:viewer="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
              x:DataType="vm:EmailViewModel"
              x:Class="Imapster.Popups.EmailDetailsPopup"
              Background="Black" WidthRequest="1280">
@@ -34,9 +35,10 @@
                 <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
 
                 <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
-                <Border StrokeShape="RoundRectangle 6" Background="Silver" Padding="8" StrokeThickness="0">
-                    <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always" >
-                        <Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />
+                <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
+                    <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always"  >
+                        <!--<Label Text="{Binding Body}" TextColor="{StaticResource Gray950}" LineBreakMode="WordWrap" />-->
+                        <viewer:SkiaHtmlView Html="{Binding Body, Mode=OneTime}"  />
                     </ScrollView>
                 </Border>
 
