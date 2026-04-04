@@ -68,7 +68,7 @@ public sealed class EmailAiService
         Geef één JSON-object terug met de volgende velden:
 
         - summary: korte samenvatting van de e-mail (string)
-        - category: een van de volgende waarden: Persoonlijk, Werk, Administratie, Reclame, Nieuws, Overig
+        - category: een van de volgende waarden: Persoonlijk, Werk, Administratie, Reclame, Nieuws, Shop, School, Overig
         - delete: true als de e-mail verwijderd moet worden, false als deze bewaard kan blijven
         - reason: korte reden voor de classificatie (string)
         - extra: optionele extra informatie (string of null)
