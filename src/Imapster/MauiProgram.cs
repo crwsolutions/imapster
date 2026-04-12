@@ -1,5 +1,8 @@
-﻿using Imapster.Popups;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Storage;
+using Imapster.Popups;
 using Imapster.Repositories;
+using Imapster.Services;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -42,10 +45,21 @@ namespace Imapster
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
-
+            // Register repositories
+            builder.Services.AddSingleton<IFolderRepository, FolderRepository>();
+            builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
+            builder.Services.AddSingleton<IAccountRepository, AccountRepository>();
             builder.Services.AddSingleton<IPromptRepository, PromptRepository>();
+
+            // Register services
+            builder.Services.AddSingleton<IImapSyncService, ImapSyncService>();
+            builder.Services.AddSingleton<IArchiveService, ArchiveService>();
+
+            builder.Services.AddSingleton(FolderPicker.Default);
+
             builder.Services.AddTransientPopup<PromptEditorPopup, PromptEditorPopupViewModel>();
             builder.Services.AddTransientPopup<MoveFolderPopup, MoveFolderPopupViewModel>();
+            builder.Services.AddTransientPopup<EmailDetailsPopup, EmailDetailsViewModel>();
 
             var app = builder.Build();
             Database.Initialize();

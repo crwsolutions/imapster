@@ -16,6 +16,31 @@ internal static class Database
         {
             CreateDatabase();
         }
+        else
+        {
+            Migrate();
+        }
+    }
+
+    private static void Migrate()
+    {
+        using var connection = new SqliteConnection($"Data Source={DbPath}");
+        connection.Open();
+
+        // Check if AttachmentArchivePath column exists in Accounts table
+        var checkColumn = new SqliteCommand(
+            "SELECT name FROM pragma_table_info('Accounts') WHERE name='AttachmentArchivePath'",
+            connection);
+        var exists = (checkColumn.ExecuteScalar() as string) != null;
+
+        if (!exists)
+        {
+            using var alterCmd = new SqliteCommand(
+                "ALTER TABLE Accounts ADD COLUMN AttachmentArchivePath NVARCHAR(500) NULL",
+                connection);
+            alterCmd.ExecuteNonQuery();
+            Debug.WriteLine("Migration: Added AttachmentArchivePath column to Accounts table");
+        }
     }
 
     private static void CreateDatabase()

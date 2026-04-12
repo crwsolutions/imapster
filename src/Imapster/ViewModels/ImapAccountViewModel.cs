@@ -22,4 +22,7 @@ public partial class ImapAccountViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string AttachmentArchivePath { get; set; } = string.Empty;
 }

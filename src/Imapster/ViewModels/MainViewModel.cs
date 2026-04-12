@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Storage;
 using Imapster.ContentViews;
 using Imapster.Extensions;
 using Imapster.Popups;
@@ -17,6 +18,7 @@ public partial class MainViewModel : BaseViewModel
     private readonly EmailAiService _emailAiService;
     private readonly IPromptRepository _promptRepository;
     private readonly IPopupService _popupService;
+    private readonly IFolderPicker _folderPicker;
 
     [ObservableProperty]
     public partial string StatusText { get; set; } = "Not connected";
@@ -73,7 +75,8 @@ public partial class MainViewModel : BaseViewModel
                           IAccountRepository accountRepository,
                           EmailAiService emailAiService,
                           IPromptRepository promptRepository,
-                          IPopupService popupService)
+                          IPopupService popupService,
+                          IFolderPicker folderPicker)
     {
         _imapSyncService = imapSyncService;
         _folderRepository = folderRepository;
@@ -82,6 +85,7 @@ public partial class MainViewModel : BaseViewModel
         _emailAiService = emailAiService;
         _promptRepository = promptRepository;
         _popupService = popupService;
+        _folderPicker = folderPicker;
 
         Title = "IMAP Client";
 
@@ -228,7 +232,7 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddAccount()
     {
-        var popup = new AddAccountPopup();
+        var popup = new AddAccountPopup(_folderPicker);
         var result = await Shell.Current.ShowPopupAsync<bool>(popup);
 
         if (result.Result is true)
@@ -254,7 +258,7 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
-        var popup = new EditAccountPopup(SelectedAccount);
+        var popup = new EditAccountPopup(SelectedAccount, _folderPicker);
         var result = await Shell.Current.ShowPopupAsync<bool>(popup);
 
         if (result.Result is true)

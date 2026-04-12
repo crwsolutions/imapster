@@ -1,4 +1,5 @@
 using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Services;
 using Imapster.ContentViews;
 using Imapster.Popups;
 using Imapster.Repositories;
@@ -39,12 +40,23 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public partial int AccountId { get; set; }
 
     [ObservableProperty]
-    public partial string? Attachments { get; set; }
-
-    [ObservableProperty]
     public partial uint? Size { get; set; }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAttachments))]
+    [NotifyPropertyChangedFor(nameof(AttachmentList))]
+    public partial string? Attachments { get; set; }
+
     public bool HasAttachments => !string.IsNullOrWhiteSpace(Attachments);
+
+    public ObservableCollection<AttachmentViewModel> AttachmentList =>
+        string.IsNullOrWhiteSpace(Attachments)
+            ? []
+            : new ObservableCollection<AttachmentViewModel>(
+                Attachments
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(a => new AttachmentViewModel { FileName = a.Trim() })
+            );
 
     // AI Properties
     [ObservableProperty]
@@ -119,7 +131,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             ? string.Join(",", attachments)
             : null;
 
-        return new EmailViewModel(
+        var viewModel = new EmailViewModel(
             id.Id,
             message.From.ToString(),
             message.To.ToString(),
@@ -132,6 +144,8 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             size,
             attachmentsString
         );
+
+        return viewModel;
     }
 
     public object? GetValue(string key) => key switch
@@ -159,8 +173,23 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     private CancellationTokenSource? _cancellationTokenSource;
 
     [RelayCommand]
-    private async Task ShowDetailsAsync() =>
-        await Shell.Current.ShowPopupAsync(new EmailDetailsPopup(this));
+    private async Task ShowDetailsAsync()
+    {
+        var popupService = App.Services.GetRequiredService<IPopupService>();
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "email", this }
+        };
+
+        await popupService.ShowPopupAsync<EmailDetailsViewModel>(
+            Shell.Current,
+            options: new PopupOptions { Shape = null, Shadow = null },
+            shellParameters: parameters
+        );
+
+        //await Shell.Current.ShowPopupAsync(new EmailDetailsPopup(this));
+    }
 
     [RelayCommand]
     private async Task RedoAiClassificationAsync()

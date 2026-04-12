@@ -4,9 +4,9 @@ namespace Imapster.Popups
 {
     public partial class EmailDetailsPopup : Popup
     {
-        public EmailDetailsPopup(EmailViewModel email)
+        public EmailDetailsPopup(EmailDetailsViewModel viewModel)
         {
-            BindingContext = email;
+            BindingContext = viewModel;
             InitializeComponent();
         }
 

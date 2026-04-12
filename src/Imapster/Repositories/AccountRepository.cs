@@ -16,27 +16,33 @@ public class AccountRepository : IAccountRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         var accounts = await connection.QueryAsync<ImapAccountViewModel>(
-            "SELECT Id, Name, Server, Port, UseSsl, Username, Password FROM Accounts");
+            "SELECT Id, Name, Server, Port, UseSsl, Username, Password, AttachmentArchivePath FROM Accounts");
         return accounts.ToList();
     }
 
-    public async Task<ImapAccountViewModel> GetAccountByIdAsync(string id)
+    public async Task<ImapAccountViewModel?> GetAccountByIdAsync(string id)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         var account = await connection.QuerySingleOrDefaultAsync<ImapAccountViewModel>(
-            "SELECT Id, Name, Server, Port, UseSsl, Username, Password FROM Accounts WHERE Id = @Id",
+            "SELECT Id, Name, Server, Port, UseSsl, Username, Password, AttachmentArchivePath FROM Accounts WHERE Id = @Id",
             new { Id = id });
-        if (account != null)
-            return account;
+        return account;
+    }
 
-        throw new KeyNotFoundException($"Account with ID '{id}' not found.");
+    public async Task<ImapAccountViewModel?> GetAccountByIdAsync(int id)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        var account = await connection.QuerySingleOrDefaultAsync<ImapAccountViewModel>(
+            "SELECT Id, Name, Server, Port, UseSsl, Username, Password, AttachmentArchivePath FROM Accounts WHERE Id = @Id",
+            new { Id = id });
+        return account;
     }
 
     public async Task AddAccountAsync(ImapAccountViewModel account)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         await connection.ExecuteAsync(
-            "INSERT INTO Accounts (Id, Name, Server, Port, UseSsl, Username, Password) VALUES (@Id, @Name, @Server, @Port, @UseSsl, @Username, @Password)",
+            "INSERT INTO Accounts (Id, Name, Server, Port, UseSsl, Username, Password, AttachmentArchivePath) VALUES (@Id, @Name, @Server, @Port, @UseSsl, @Username, @Password, @AttachmentArchivePath)",
             account);
     }
 
@@ -44,7 +50,7 @@ public class AccountRepository : IAccountRepository
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         await connection.ExecuteAsync(
-            "UPDATE Accounts SET Name = @Name, Server = @Server, Port = @Port, UseSsl = @UseSsl, Username = @Username, Password = @Password WHERE Id = @Id",
+            "UPDATE Accounts SET Name = @Name, Server = @Server, Port = @Port, UseSsl = @UseSsl, Username = @Username, Password = @Password, AttachmentArchivePath = @AttachmentArchivePath WHERE Id = @Id",
             account);
     }
 

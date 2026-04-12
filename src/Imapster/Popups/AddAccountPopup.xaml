@@ -11,7 +11,7 @@
         <VerticalStackLayout>
             <Label Text="Add New Account" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,0,0,20"/>
             
-            <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto, auto, auto, auto" RowSpacing="10">
+            <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto, auto, auto, auto, auto" RowSpacing="10">
                 <Label Text="Name:" Grid.Column="0" Grid.Row="0" VerticalOptions="Center" />
                 <Entry Text="{Binding Name}" Grid.Column="1" Grid.Row="0" />
                 
@@ -29,6 +29,12 @@
                 
                 <Label Text="Password:" Grid.Column="0" Grid.Row="5" VerticalOptions="Center" />
                 <Entry Text="{Binding Password}" Grid.Column="1" Grid.Row="5" IsPassword="True" />
+                
+                <Label Text="Archive Path:" Grid.Column="0" Grid.Row="6" VerticalOptions="Center" />
+                <HorizontalStackLayout Grid.Column="1" Grid.Row="6" Spacing="5">
+                    <Entry Text="{Binding AttachmentArchivePath}" HorizontalOptions="FillAndExpand" IsEnabled="False" />
+                    <Button Text="Browse" Clicked="OnBrowseClicked" WidthRequest="80" />
+                </HorizontalStackLayout>
             </Grid>
             
             <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,20,0,0">

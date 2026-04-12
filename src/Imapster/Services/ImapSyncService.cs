@@ -2,6 +2,7 @@ using Imapster.Repositories;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Search;
+using MimeKit;
 
 namespace Imapster.Services;
 
@@ -306,5 +307,21 @@ public class ImapSyncService : IImapSyncService
             throw;
         }
     }
+
+    public async Task<MimeMessage> GetMessageAsync(int accountId, string folderId, uint emailId)
+    {
+        if (_imapClient == null || _currentAccount == null || _currentAccount.Id != accountId)
+            throw new InvalidOperationException("Not connected to specified account");
+
+        var folder = await _imapClient.GetFolderAsync(folderId);
+        if (folder == null)
+            throw new InvalidOperationException($"Folder {folderId} not found");
+
+        await folder.OpenAsync(FolderAccess.ReadOnly);
+        var message = await folder.GetMessageAsync(new UniqueId(emailId));
+        return message;
+    }
+
+    public bool IsConnected() => _imapClient != null && _imapClient.IsConnected;
 }
 

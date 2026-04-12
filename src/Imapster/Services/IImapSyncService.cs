@@ -1,3 +1,5 @@
+using MimeKit;
+
 namespace Imapster.Services;
 
 public interface IImapSyncService : IDisposable
@@ -9,4 +11,6 @@ public interface IImapSyncService : IDisposable
     Task<string> MoveEmailsToTrashAsync(string sourceFolder, List<uint> emailIds);
     Task<string> MoveEmailsToFolderAsync(string sourceFolderId, string targetFolderId, List<uint> emailIds);
     Task EmptyFolderAsync(int accountId, string folderId);
+    bool IsConnected();
+    Task<MimeMessage> GetMessageAsync(int accountId, string folderId, uint emailId);
 }
