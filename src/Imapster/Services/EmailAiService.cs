@@ -127,8 +127,49 @@ public sealed class EmailAiService
         }
 
         var s = bob.ToString();
-        var result = JsonSerializer.Deserialize<EmailClassificationResult>(s, _jsonOptions)!;
+        var result = TryParseJson(s, _jsonOptions);
         return result;
+    }
+
+    private static EmailClassificationResult TryParseJson(string input, JsonSerializerOptions options)
+    {
+        // First, try to deserialize the raw input directly
+        try
+        {
+            var result = JsonSerializer.Deserialize<EmailClassificationResult>(input, options);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+        catch
+        {
+            // Fall through to greedy extraction
+        }
+
+        // Try to extract JSON greedily: find first '{' and last '}'
+        var start = input.IndexOf('{');
+        var end = input.LastIndexOf('}');
+
+        if (start >= 0 && end > start)
+        {
+            var json = input.Substring(start, end - start + 1);
+            try
+            {
+                var result = JsonSerializer.Deserialize<EmailClassificationResult>(json, options);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            catch
+            {
+                // Fall through to throw exception
+            }
+        }
+
+        var truncatedInput = input.Length > 128 ? input.Substring(0, 128) : input;
+        throw new InvalidOperationException($"Failed to parse AI response as valid JSON. Raw input (first 128 chars): {truncatedInput}");
     }
 
     private async Task<string> GetEffectivePromptAsync()

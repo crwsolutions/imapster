@@ -117,6 +117,10 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
         }
         catch (Exception exception)
         {
+            // Set error state and save the email
+            Email.AiCategory = "Error";
+            Email.AiSummary = exception.Message;
+            await _emailRepository.UpdateEmailAsync(Email);
             Status = $"AI classification failed: {exception.Message}";
         }
         finally

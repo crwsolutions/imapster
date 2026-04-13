@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
 using Imapster.ContentViews;
@@ -381,8 +381,10 @@ public partial class MainViewModel : BaseViewModel
                 }
                 catch (Exception ex)
                 {
-                    StatusText = $"Error generating summary: {ex.Message}";
-                    return;
+                    // Set error state and save the email
+                    email.AiCategory = "Error";
+                    email.AiSummary = ex.Message;
+                    StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
                 }
             }
         }
