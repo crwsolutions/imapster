@@ -164,7 +164,18 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
 
             await _emailRepository.UpdateEmailAsync(newEmail);
 
-            Email = newEmail;
+            Email.From = newEmail.From;
+            Email.To = newEmail.To;
+            Email.Date = newEmail.Date;
+            Email.Subject = newEmail.Subject;
+            Email.Body = newEmail.Body;
+            Email.IsRead = newEmail.IsRead;
+            Email.Size = newEmail.Size;
+            Email.Attachments = newEmail.Attachments;
+            Email.AiSummary = newEmail.AiSummary;
+            Email.AiCategory = newEmail.AiCategory;
+            Email.AiDelete = newEmail.AiDelete;
+            Email.AiDeleteMotivation = newEmail.AiDeleteMotivation;
             Status = "Email re-fetched successfully";
         }
         catch (Exception ex)

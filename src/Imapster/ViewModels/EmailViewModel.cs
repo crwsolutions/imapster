@@ -1,9 +1,4 @@
-using CommunityToolkit.Maui.Extensions;
-using CommunityToolkit.Maui.Services;
 using Imapster.ContentViews;
-using Imapster.Popups;
-using Imapster.Repositories;
-using Imapster.Services;
 using MailKit;
 using MimeKit;
 
@@ -112,7 +107,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             To = message.To.ToString(),
             Date = message.Date.DateTime,
             Subject = message.Subject ?? "-",
-            Body = message.TextBody ?? message.HtmlBody ?? "",
+            Body = message.HtmlBody ?? message.TextBody ?? "",
             IsRead = flags?.HasFlag(MessageFlags.Seen) is true,
             FolderId = folderId,
             AccountId = accountId,
