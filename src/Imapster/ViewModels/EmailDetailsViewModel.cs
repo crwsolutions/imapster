@@ -2,6 +2,7 @@ using CommunityToolkit.Maui.Extensions;
 using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
+using MailKit;
 
 namespace Imapster.ViewModels;
 
@@ -10,12 +11,12 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
     private readonly IArchiveService _archiveService;
     private readonly IImapSyncService _imapSyncService;
     private readonly IAccountRepository _accountRepository;
-    private EmailAiService? _emailAiService;
-    private IEmailRepository? _emailRepository;
+    private EmailAiService _emailAiService;
+    private IEmailRepository _emailRepository;
 
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public EmailDetailsViewModel(IArchiveService archiveService, IImapSyncService imapSyncService, IAccountRepository accountRepository, EmailAiService? emailAiService, IEmailRepository? emailRepository)
+    public EmailDetailsViewModel(IArchiveService archiveService, IImapSyncService imapSyncService, IAccountRepository accountRepository, EmailAiService emailAiService, IEmailRepository emailRepository)
     {
         _archiveService = archiveService;
         _imapSyncService = imapSyncService;
@@ -135,5 +136,44 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
     {
         _cancellationTokenSource?.Cancel();
         Status = "AI classification cancelled";
+    }
+
+    [RelayCommand]
+    private async Task ReFetchEmailAsync()
+    {
+        try
+        {
+            Status = "Re-fetching email...";
+            IsBusy = true;
+
+            if (!_imapSyncService.IsConnected())
+            {
+                Status = "Not connected to IMAP server";
+                return;
+            }
+
+            var message = await _imapSyncService.GetMessageAsync(Email!.AccountId, Email.FolderId, Email.Id);
+
+            var newEmail = EmailViewModel.FromMessage(
+                message,
+                new UniqueId(Email.Id),
+                Email.FolderId,
+                Email.AccountId,
+                Email.Size,
+                null);
+
+            await _emailRepository.UpdateEmailAsync(newEmail);
+
+            Email = newEmail;
+            Status = "Email re-fetched successfully";
+        }
+        catch (Exception ex)
+        {
+            Status = $"Failed to re-fetch email: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

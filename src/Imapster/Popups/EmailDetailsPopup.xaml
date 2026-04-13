@@ -110,6 +110,11 @@
                         BackgroundColor="Blue" 
                         TextColor="White" 
                         WidthRequest="150" />
+                    <Button Text="Re-fetch" 
+                        Command="{Binding ReFetchEmailCommand}"
+                        BackgroundColor="Orange" 
+                        TextColor="White" 
+                        WidthRequest="150" />
                     <Button Text="Edit Prompt" 
                         Clicked="OnEditPromptClicked" 
                         BackgroundColor="Green" 
