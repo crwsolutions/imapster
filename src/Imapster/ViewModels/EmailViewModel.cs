@@ -74,12 +74,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsBusy { get; set; }
-
-    [ObservableProperty]
-    public partial string? Status { get; set; }
-
     public EmailViewModel()
     {
 
@@ -168,10 +162,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         _ => null,
     };
 
-    private EmailAiService? _emailAiService;
-    private IEmailRepository? _emailRepository;
-    private CancellationTokenSource? _cancellationTokenSource;
-
     [RelayCommand]
     private async Task ShowDetailsAsync()
     {
@@ -187,62 +177,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             options: new PopupOptions { Shape = null, Shadow = null },
             shellParameters: parameters
         );
-
-        //await Shell.Current.ShowPopupAsync(new EmailDetailsPopup(this));
-    }
-
-    [RelayCommand]
-    private async Task RedoAiClassificationAsync()
-    {
-        // Cancel any ongoing classification first
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
-
-        Status = "Running AI classification...";
-        IsBusy = true;
-
-        _emailAiService ??= App.Services.GetRequiredService<EmailAiService>();
-        _emailRepository ??= App.Services.GetRequiredService<IEmailRepository>();
-
-        _cancellationTokenSource = new CancellationTokenSource();
-
-        // Show cancel popup
-        var popup = new CancelAiPopup(_cancellationTokenSource);
-        Application.Current!.Windows[0].Page!.ShowPopup(popup, new PopupOptions
-        {
-            CanBeDismissedByTappingOutsideOfPopup = false
-        });
-
-        try
-        {
-            var classification = await _emailAiService.ClassifyEmailAsync(this, _cancellationTokenSource.Token);
-            AiSummary = classification.Summary;
-            AiCategory = classification.Category;
-            AiDelete = classification.Delete;
-            AiDeleteMotivation = classification.Reason;
-            await _emailRepository.UpdateEmailAsync(this);
-            Status = "AI classification completed";
-        }
-        catch (OperationCanceledException)
-        {
-            Status = "AI classification cancelled";
-        }
-        catch (Exception exception)
-        {
-            Status = $"AI classification failed: {exception.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-            await popup.CloseAsync(false);
-        }
-    }
-
-    [RelayCommand]
-    private void CancelAiClassification()
-    {
-        _cancellationTokenSource?.Cancel();
-        Status = "AI classification cancelled";
     }
 
     public bool Equals(EmailViewModel? other) =>

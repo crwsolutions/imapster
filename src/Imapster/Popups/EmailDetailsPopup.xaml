@@ -98,8 +98,8 @@
             </VerticalStackLayout>
         </ScrollView>
         <HorizontalStackLayout Spacing="8" Grid.Row="1">
-            <ActivityIndicator IsRunning="{Binding Email.IsBusy}" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="18" HeightRequest="18" />
-            <Label Text="{Binding Email.Status}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="18" HeightRequest="18" />
+            <Label Text="{Binding Status}" />
         </HorizontalStackLayout>
     </Grid>
 </toolkit:Popup>
