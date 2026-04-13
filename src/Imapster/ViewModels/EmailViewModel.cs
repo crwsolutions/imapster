@@ -74,11 +74,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
-    public EmailViewModel()
-    {
-
-    }
-
     public string FormattedSize => Size is null ? "-" : FormatSize(Size.Value);
 
     private static string FormatSize(long bytes)
@@ -99,21 +94,6 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         return $"{bytes / GB:0.0} GB";
     }
 
-    public EmailViewModel(uint id, string from, string to, DateTime date, string subject, string body, bool isRead, string folderId, int accountId, uint? size, string? attachments)
-    {
-        Id = id;
-        From = from;
-        To = to;
-        Date = date;
-        Subject = subject;
-        Body = body;
-        IsRead = isRead;
-        FolderId = folderId;
-        AccountId = accountId;
-        Size = size;
-        Attachments = attachments;
-    }
-
     public static EmailViewModel FromMessage(MimeMessage message, UniqueId id, string folderId, int accountId, uint? size, MessageFlags? flags)
     {
         var attachments = message.Attachments
@@ -125,21 +105,20 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
             ? string.Join(",", attachments)
             : null;
 
-        var viewModel = new EmailViewModel(
-            id.Id,
-            message.From.ToString(),
-            message.To.ToString(),
-            message.Date.DateTime,
-            message.Subject ?? "-",
-            message.TextBody ?? message.HtmlBody ?? "",
-            flags?.HasFlag(MessageFlags.Seen) is true,
-            folderId,
-            accountId,
-            size,
-            attachmentsString
-        );
-
-        return viewModel;
+        return new EmailViewModel
+        {
+            Id = id.Id,
+            From = message.From.ToString(),
+            To = message.To.ToString(),
+            Date = message.Date.DateTime,
+            Subject = message.Subject ?? "-",
+            Body = message.TextBody ?? message.HtmlBody ?? "",
+            IsRead = flags?.HasFlag(MessageFlags.Seen) is true,
+            FolderId = folderId,
+            AccountId = accountId,
+            Size = size,
+            Attachments = attachmentsString
+        };
     }
 
     public object? GetValue(string key) => key switch
