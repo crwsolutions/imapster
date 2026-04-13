@@ -11,6 +11,19 @@
           ColumnDefinitions="*"
           Padding="10">
 
+        <Label x:Name="MenuLabel" StyleClass="LabelStyle1" Text="RightClickMenu" IsVisible="False">
+            <FlyoutBase.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="Back" Command="{Binding TrashCommand}" >
+                        <MenuFlyoutItem.KeyboardAccelerators>
+                            <KeyboardAccelerator Modifiers="None" Key="Delete" />
+                        </MenuFlyoutItem.KeyboardAccelerators>
+                    </MenuFlyoutItem>
+                </MenuFlyout>
+            </FlyoutBase.ContextFlyout>
+        </Label>
+
+
         <!-- Toolbar with account management and actions -->
         <HorizontalStackLayout Spacing="12">
             <Button Text="+" FontFamily="FontAwesomeSolid" VerticalOptions="Center"
@@ -25,7 +38,7 @@
             <Button Text="&#xf01e;" FontFamily="FontAwesomeSolid"  VerticalOptions="Center" Command="{Binding RefreshCommand}" />
             <Button Text="&#xf544;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding AiCommand}" />
             <Button Text="&#xf5d0;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding EditPromptCommand}" />
-            <Button Text="&#xf2ed;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding TrashCommand}" />
+            <Button Text="&#xf2ed;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding TrashCommand}"/>
             <Button Text="&#xf56e;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding MoveCommand}" />
             <Entry  Placeholder="Search emails..." Text="{Binding SearchText}" HeightRequest="42" WidthRequest="400" />
         </HorizontalStackLayout>
