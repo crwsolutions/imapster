@@ -93,8 +93,13 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     {
         var attachments = message.Attachments
             .OfType<MimeEntity>()
-            .Where(a => !string.IsNullOrWhiteSpace(a.ContentDisposition?.FileName))
-            .Select(a => a.ContentDisposition!.FileName!)
+            .Select(a => 
+            {
+                // Try ContentDisposition.FileName first, fall back to ContentType.Name
+                var fileName = a.ContentDisposition?.FileName ?? a.ContentType?.Name;
+                return fileName;
+            })
+            .Where(a => !string.IsNullOrWhiteSpace(a))
             .ToList();
         var attachmentsString = attachments.Count > 0
             ? string.Join(",", attachments)

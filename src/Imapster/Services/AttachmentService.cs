@@ -87,9 +87,9 @@ public class AttachmentService : IAttachmentService
     /// </summary>
     internal async Task DownloadAttachmentToPathAsync(MimeMessage message, string attachmentName, string fullPath)
     {
-        // Find the attachment by name
+        // Find the attachment by name (check both ContentDisposition.FileName and ContentType.Name)
         var attachment = message.Attachments.FirstOrDefault(a =>
-            a.ContentDisposition?.FileName == attachmentName) ??
+            a.ContentDisposition?.FileName == attachmentName || a.ContentType?.Name == attachmentName) ??
             throw new InvalidOperationException($"Attachment '{attachmentName}' not found in email");
 
         // Download and save attachment
@@ -110,7 +110,7 @@ public class AttachmentService : IAttachmentService
         var message = await _imapSyncService.GetMessageAsync(accountId, folderId, emailId);
 
         var attachment = message.Attachments.FirstOrDefault(a =>
-            a.ContentDisposition?.FileName == attachmentName) ??
+            a.ContentDisposition?.FileName == attachmentName || a.ContentType?.Name == attachmentName) ??
             throw new InvalidOperationException($"Attachment '{attachmentName}' not found in email");
 
         return attachment;
