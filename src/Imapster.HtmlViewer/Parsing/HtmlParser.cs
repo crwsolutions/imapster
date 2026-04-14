@@ -46,7 +46,7 @@ public sealed partial class HtmlParser
             TagName = element.TagName
         };
 
-        ParseInlineStyles(element, node.Style);
+        ParseInlineStyles(element, node.Style, node.Type);
         ParseAttributes(element, node);
 
         // Check if this is a preformatted element
@@ -121,11 +121,16 @@ public sealed partial class HtmlParser
     {
         foreach (var attr in element.Attributes)
         {
+            // Skip height attribute for img elements - it's often a very large value
+            // and should be handled by the layout engine, not as a style property
+            if (node.Type == HtmlElementType.Image && attr.Name.Equals("height", StringComparison.OrdinalIgnoreCase))
+                continue;
+            
             node.Attributes[attr.Name] = attr.Value;
         }
     }
 
-    private void ParseInlineStyles(IHtmlElement element, HtmlStyle style)
+    private void ParseInlineStyles(IHtmlElement element, HtmlStyle style, HtmlElementType nodeType = HtmlElementType.Unknown)
     {
         var styleAttr = element.GetAttribute("style");
         if (string.IsNullOrEmpty(styleAttr)) return;
@@ -244,6 +249,11 @@ public sealed partial class HtmlParser
                     break;
 
                 case "height":
+                    // Skip height style for image elements - it's often a very large value
+                    // and should be handled by the layout engine, not as a style property
+                    if (nodeType == HtmlElementType.Image)
+                        break;
+                    
                     if (propertyValue != "auto" && !propertyValue.EndsWith("%", StringComparison.OrdinalIgnoreCase))
                     {
                         style.HeightSet = true;

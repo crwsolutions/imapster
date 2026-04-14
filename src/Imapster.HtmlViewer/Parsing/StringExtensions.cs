@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Imapster.HtmlViewer.Parsing;
@@ -15,27 +16,27 @@ public static partial class StringExtensions
 
         if (value.EndsWith("px", StringComparison.OrdinalIgnoreCase))
         {
-            return double.TryParse(value[..^2], out var result) ? result : 0;
+            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : 0;
         }
 
         if (value.EndsWith("em", StringComparison.OrdinalIgnoreCase))
         {
-            return double.TryParse(value[..^2], out var result) ? result * 16 : 0;
+            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 16 : 0;
         }
 
         if (value.EndsWith("rem", StringComparison.OrdinalIgnoreCase))
         {
-            return double.TryParse(value[..^3], out var result) ? result * 16 : 0;
+            return double.TryParse(value[..^3], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 16 : 0;
         }
 
         if (value.EndsWith("pt", StringComparison.OrdinalIgnoreCase))
         {
-            return double.TryParse(value[..^2], out var result) ? result * 1.333 : 0;
+            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 1.333 : 0;
         }
 
         if (value.EndsWith("%", StringComparison.OrdinalIgnoreCase)) return 0;
 
-        return double.TryParse(value, out var plainResult) ? plainResult : 0;
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var plainResult) ? plainResult : 0;
     }
 
     public static string? ConvertColorToHex(this string color)
