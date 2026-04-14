@@ -11,10 +11,13 @@ namespace Imapster.ContentViews
 {
     public partial class DataGridView : ContentView
     {
-        private string? _currentSortKey;
-        private bool _sortAscending = true;
-        private Dictionary<string, List<object?>> _filters = new();
-        private int _lastSelectedIndex = -1;
+    private string? _currentSortKey;
+    private bool _sortAscending = true;
+    private Dictionary<string, List<object?>> _filters = new();
+    private int _lastSelectedIndex = -1;
+    private int _clickCount = 0;
+    private DateTime _lastClickTime;
+    private const int DoubleClickThreshold = 300; // milliseconds
 
         public IEnumerable ItemsSource
         {
@@ -521,6 +524,29 @@ namespace Imapster.ContentViews
             {
                 return;
             }
+
+            // Double click detection
+            var currentTime = DateTime.Now;
+            var timeSinceLastClick = currentTime - _lastClickTime;
+
+            if (timeSinceLastClick.TotalMilliseconds <= DoubleClickThreshold && !IsCtrlPressed() && !IsShiftPressed())
+            {
+                _clickCount++;
+                if (_clickCount >= 2)
+                {
+                    // Double click detected
+                    rowItem.IsSelected = false;
+                    rowItem.OnDoubleTapped();
+                    _clickCount = 0;
+                    return;
+                }
+            }
+            else
+            {
+                _clickCount = 1;
+            }
+
+            _lastClickTime = currentTime;
 
             if (IsCtrlPressed()) // Ctrl+klik: toggle selectie van deze rij
             {

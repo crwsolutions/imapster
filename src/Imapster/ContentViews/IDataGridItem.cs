@@ -1,4 +1,4 @@
-﻿namespace Imapster.ContentViews;
+namespace Imapster.ContentViews;
 
 public interface IDataGridItem
 {
@@ -8,4 +8,6 @@ public interface IDataGridItem
     object? GetValue(string key);
 
     bool IsSelected { get; set; }
+
+    void OnDoubleTapped();
 }

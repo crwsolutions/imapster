@@ -158,4 +158,9 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         Id == other.Id &&
         FolderId == other.FolderId &&
         AccountId == other.AccountId;
+
+    public void OnDoubleTapped()
+    {
+        _ = ShowDetailsAsync();
+    }
 }

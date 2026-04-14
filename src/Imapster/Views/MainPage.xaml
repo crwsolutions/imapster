@@ -125,13 +125,6 @@
                         </cv:DataGridColumn.ContentTemplate>
                     </cv:DataGridColumn>
                     <cv:DataGridColumn Header="Delete Motivation" Key="AiDeleteMotivation"  />
-                    <cv:DataGridColumn Header="Details" Key="Details" Width="80" IsSortable="False" IsFilterable="False">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Button Margin="0,4,0,0" Text="&#xF141;" FontFamily="FontAwesomeSolid" Command="{Binding ShowDetailsCommand, Mode=OneTime}" WidthRequest="25" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
                 </cv:DataGridView.Columns>
             </cv:DataGridView>
         </Grid>
