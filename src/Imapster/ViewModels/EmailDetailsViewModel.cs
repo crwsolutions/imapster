@@ -3,12 +3,13 @@ using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
 using MailKit;
+using System.Diagnostics;
 
 namespace Imapster.ViewModels;
 
 public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributable
 {
-    private readonly IArchiveService _archiveService;
+    private readonly IAttachmentService _archiveService;
     private readonly IImapSyncService _imapSyncService;
     private readonly IAccountRepository _accountRepository;
     private EmailAiService _emailAiService;
@@ -16,7 +17,7 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
 
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public EmailDetailsViewModel(IArchiveService archiveService, IImapSyncService imapSyncService, IAccountRepository accountRepository, EmailAiService emailAiService, IEmailRepository emailRepository)
+    public EmailDetailsViewModel(IAttachmentService archiveService, IImapSyncService imapSyncService, IAccountRepository accountRepository, EmailAiService emailAiService, IEmailRepository emailRepository)
     {
         _archiveService = archiveService;
         _imapSyncService = imapSyncService;
@@ -142,6 +143,28 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
     {
         _cancellationTokenSource?.Cancel();
         Status = "AI classification cancelled";
+    }
+
+    [RelayCommand]
+    private async Task OpenAttachmentAsync(AttachmentViewModel attachment)
+    {
+        try
+        {
+            var tempPath = await _archiveService.OpenAttachmentAsync(
+                Email!.AccountId,
+                Email.FolderId,
+                Email.Id,
+                attachment.FileName);
+
+            Process.Start(new ProcessStartInfo(tempPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            await Application.Current!.Windows[0]!.Page!.DisplayAlertAsync(
+                "Error",
+                $"Failed to open attachment: {ex.Message}",
+                "OK");
+        }
     }
 
     [RelayCommand]

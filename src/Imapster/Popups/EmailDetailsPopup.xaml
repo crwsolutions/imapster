@@ -75,10 +75,16 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:AttachmentViewModel">
                             <Border StrokeShape="Rectangle" StrokeThickness="1" Stroke="{StaticResource Gray400}" Padding="8" Margin="0,0,0,5">
-                                <Grid ColumnDefinitions="Auto, Auto" ColumnSpacing="10">
+                                <Grid ColumnDefinitions="Auto, Auto, Auto" ColumnSpacing="10">
                                     <Label Text="{Binding FileName}" Grid.Column="0" VerticalOptions="Center" TextColor="White" />
                                     <Button Text="Archive" Grid.Column="1" 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailDetailsViewModel}}, Path=ArchiveAttachmentCommand}"
+                                            CommandParameter="{Binding .}"
+                                            IsEnabled="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailDetailsViewModel}}, Path=CanArchive}"
+                                            WidthRequest="80"
+                                            HeightRequest="30" />
+                                    <Button Text="Open" Grid.Column="2" 
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailDetailsViewModel}}, Path=OpenAttachmentCommand}"
                                             CommandParameter="{Binding .}"
                                             IsEnabled="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailDetailsViewModel}}, Path=CanArchive}"
                                             WidthRequest="80"

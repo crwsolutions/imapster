@@ -1,4 +1,3 @@
-using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Storage;
 using Imapster.Popups;
 using Imapster.Repositories;
@@ -12,6 +11,26 @@ namespace Imapster
 {
     public static class MauiProgram
     {
+        private static async Task CleanupTempDirectoryAsync()
+        {
+            try
+            {
+                var tempDir = Path.Combine(FileSystem.AppDataDirectory, "temp");
+                if (Directory.Exists(tempDir))
+                {
+                    foreach (var file in Directory.GetFiles(tempDir))
+                    {
+                        try { File.Delete(file); } catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Fire and forget - don't crash the app on cleanup failure
+                Debug.WriteLine($"Failed to cleanup temp directory: {ex.Message}");
+            }
+        }
+
         public static MauiApp CreateMauiApp()
         {
             //var endpoint = "http://localhost:11434/";
@@ -53,7 +72,7 @@ namespace Imapster
 
             // Register services
             builder.Services.AddSingleton<IImapSyncService, ImapSyncService>();
-            builder.Services.AddSingleton<IArchiveService, ArchiveService>();
+            builder.Services.AddSingleton<IAttachmentService, AttachmentService>();
 
             builder.Services.AddSingleton(FolderPicker.Default);
 
@@ -63,6 +82,7 @@ namespace Imapster
 
             var app = builder.Build();
             Database.Initialize();
+            _ = CleanupTempDirectoryAsync();
             return app;
         }
     }
