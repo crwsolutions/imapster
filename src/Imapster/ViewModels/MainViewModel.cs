@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
@@ -7,7 +6,6 @@ using Imapster.Extensions;
 using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
-using System.Threading;
 
 namespace Imapster.ViewModels;
 
@@ -90,12 +88,9 @@ public partial class MainViewModel : BaseViewModel
         _folderPicker = folderPicker;
 
         Title = "IMAP Client";
-
-        // Load data from repositories
-        LoadDataAsync();
     }
 
-    private async void LoadDataAsync()
+    internal async Task LoadDataAsync()
     {
         try
         {
@@ -213,7 +208,7 @@ public partial class MainViewModel : BaseViewModel
         StatusText = $"Getting local emails of '{id}'";
 
         // Load emails from local storage in background thread
-        var emails = await Task.Run(() => _emailRepository.GetEmailsByFolderIdAsync(SelectedAccount.Id, id)).ConfigureAwait(false);
+        var emails = await _emailRepository.GetEmailsByFolderIdAsync(SelectedAccount.Id, id);
         var uiEmails = new ObservableCollection<EmailViewModel>();
         foreach (var email in emails)
         {
@@ -221,10 +216,10 @@ public partial class MainViewModel : BaseViewModel
         }
 
         // Update UI on main thread
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
+        //await MainThread.InvokeOnMainThreadAsync(() =>
+        //{
             Emails = uiEmails;
-        });
+        //});
 
         StatusText = $"Retrieved {emails.Count} emails";
 
@@ -384,7 +379,7 @@ public partial class MainViewModel : BaseViewModel
                     i = Interlocked.Increment(ref i);
                     //await MainThread.InvokeOnMainThreadAsync(() =>
                     //{
-                        StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
+                    StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
                     //});
                 }
                 catch (Exception ex)
@@ -396,7 +391,7 @@ public partial class MainViewModel : BaseViewModel
                     i = Interlocked.Increment(ref i);
                     //await MainThread.InvokeOnMainThreadAsync(() =>
                     //{
-                        StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
+                    StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
                     //});
                 }
             });
