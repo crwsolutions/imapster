@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
@@ -6,6 +7,7 @@ using Imapster.Extensions;
 using Imapster.Popups;
 using Imapster.Repositories;
 using Imapster.Services;
+using System.Threading;
 
 namespace Imapster.ViewModels;
 
@@ -364,29 +366,40 @@ public partial class MainViewModel : BaseViewModel
 
         try
         {
-            foreach (var email in selectedEmails)
+            await Parallel.ForEachAsync(selectedEmails, new ParallelOptions
             {
-                _aiCancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                i++;
+                MaxDegreeOfParallelism = 4,
+                CancellationToken = _aiCancellationTokenSource.Token
+            }, async (email, token) =>
+            {
                 try
                 {
-                    var classification = await _emailAiService.ClassifyEmailAsync(email, _aiCancellationTokenSource.Token);
+                    var classification = await _emailAiService.ClassifyEmailAsync(email, token);
                     email.AiSummary = classification.Summary;
                     email.AiCategory = classification.Category;
                     email.AiDelete = classification.Delete;
                     email.AiDeleteMotivation = classification.Reason;
                     await _emailRepository.UpdateEmailAsync(email);
-                    StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
+
+                    i = Interlocked.Increment(ref i);
+                    //await MainThread.InvokeOnMainThreadAsync(() =>
+                    //{
+                        StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
+                    //});
                 }
                 catch (Exception ex)
                 {
                     // Set error state and save the email
                     email.AiCategory = "Error";
                     email.AiSummary = ex.Message;
-                    StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
+
+                    i = Interlocked.Increment(ref i);
+                    //await MainThread.InvokeOnMainThreadAsync(() =>
+                    //{
+                        StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
+                    //});
                 }
-            }
+            });
         }
         catch (OperationCanceledException)
         {
