@@ -46,7 +46,13 @@ public class ArchiveService : IArchiveService
         // Create path structure: mainPath/year/fromAddress_filename
         var mainPath = account.AttachmentArchivePath;
         var year = message.Date.DateTime.Year.ToString();
-        var fromAddress = message.From?.FirstOrDefault()?.ToString() ?? "unknown";
+        var from = message.From?.FirstOrDefault();
+        var fromAddress = from switch
+        {
+            MailboxAddress mb => mb.Address,
+            GroupAddress g => g.Name,
+            _ => "unknown"
+        };
 
         var yearPath = Path.Combine(mainPath, year);
         Directory.CreateDirectory(yearPath);
