@@ -66,10 +66,16 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
                 Email.Id,
                 attachment.FileName);
 
-            await Application.Current!.Windows[0]!.Page!.DisplayAlertAsync(
+            var openDocument = await Application.Current!.Windows[0]!.Page!.DisplayAlertAsync(
                 "Success",
-                $"Attachment archived to: {result}",
-                "OK");
+                $"Attachment archived to: {result}. Do you want to open the document?",
+                "Yes",
+                "No");
+
+            if (openDocument)
+            {
+                Process.Start(new ProcessStartInfo(result) { UseShellExecute = true });
+            }
         }
         catch (Exception ex)
         {
