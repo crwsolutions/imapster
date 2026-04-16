@@ -32,7 +32,7 @@
                 
                 <Label Text="Archive Path:" Grid.Column="0" Grid.Row="6" VerticalOptions="Center" />
                 <HorizontalStackLayout Grid.Column="1" Grid.Row="6" Spacing="5">
-                    <Entry Text="{Binding AttachmentArchivePath}" HorizontalOptions="FillAndExpand" IsEnabled="False" />
+                    <Entry Text="{Binding AttachmentArchivePath}" IsEnabled="False" />
                     <Button Text="Browse" Clicked="OnBrowseClicked" WidthRequest="80" />
                 </HorizontalStackLayout>
             </Grid>
