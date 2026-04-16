@@ -1,12 +1,16 @@
 using Imapster.ContentViews;
 using MailKit;
 using MimeKit;
+using System.Text.RegularExpressions;
 
 namespace Imapster.ViewModels;
 
 [DebuggerDisplay("Email: From = {From}, Date = {Date} '{Subject}'")]
 public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatable<EmailViewModel>
 {
+    [GeneratedRegex("<[^>]+>", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlRegEx { get; }
+
     [ObservableProperty]
     public partial uint Id { get; set; } = default!;
 
@@ -23,7 +27,10 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public partial string Subject { get; set; } = default!;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BodyHtml))]
     public partial string Body { get; set; } = default!;
+
+    public string BodyHtml => HtmlRegEx.IsMatch(Body) ? Body : $"<html><pre>{Body}</pre></html>";
 
     [ObservableProperty]
     public partial bool IsRead { get; set; } = default!;

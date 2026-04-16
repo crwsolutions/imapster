@@ -54,7 +54,7 @@
                 <Grid x:Name="HtmlContentGrid" IsVisible="True">
                     <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
                         <ScrollView HeightRequest="300" VerticalScrollBarVisibility="Always">
-                            <viewer:HtmlViewer Html="{Binding Email.Body, Mode=OneWay}" />
+                            <viewer:HtmlViewer Html="{Binding Email.BodyHtml, Mode=OneWay}" />
                         </ScrollView>
                     </Border>
                 </Grid>
