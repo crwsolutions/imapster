@@ -126,12 +126,14 @@ public partial class HtmlViewer : ContentView
     /// <summary>
     /// Occurs when text is selected.
     /// </summary>
+#pragma warning disable CS0067 // Event is never used
     public event EventHandler<string>? TextSelected;
 
     /// <summary>
     /// Occurs when a link is clicked.
     /// </summary>
     public event EventHandler<string>? LinkClicked;
+#pragma warning restore CS0067
 
     /// <summary>
     /// Creates a new instance of the HtmlViewer.

@@ -31,8 +31,8 @@ namespace Imapster.Popups
 
         private void ShowTab(string tab)
         {
-            var primaryColor = (Color)Application.Current.Resources["Primary"];
-            var grayColor = (Color)Application.Current.Resources["Gray400"];
+            var primaryColor = (Color)Application.Current!.Resources["Primary"];
+            var grayColor = (Color)Application.Current!.Resources["Gray400"];
             
             if (tab == "html")
             {

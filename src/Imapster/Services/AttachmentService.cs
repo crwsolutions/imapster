@@ -94,7 +94,7 @@ public class AttachmentService : IAttachmentService
 
         // Download and save attachment
         using var fileStream = File.Create(fullPath);
-        if (attachment is MimePart mimePart)
+        if (attachment is MimePart mimePart && mimePart.Content is not null)
         {
             using var contentStream = mimePart.Content.Open();
             await contentStream.CopyToAsync(fileStream);
