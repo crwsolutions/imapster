@@ -27,7 +27,7 @@ public partial class EmailDetailsViewModel : ObservableObject, IQueryAttributabl
     }
 
     [ObservableProperty]
-    private bool _canArchive = false;
+    public partial bool CanArchive { get; set; }
 
     [ObservableProperty]
     public partial EmailViewModel Email { get; set; } = default!;

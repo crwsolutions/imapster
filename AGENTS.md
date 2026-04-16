@@ -105,8 +105,23 @@ dotnet run                            # Run the application
 
 ### ViewModel Implementation
 - Use `public partial class ViewModelName : ObservableObject`
-- Decorate `public partial` properties with `[ObservableProperty]` - generates backing fields
-- ⚠️ **IMPORTANT**: This changed recently - do NOT use private fields with ObservableProperty
+- ✅ **CORRECT**: Use `[ObservableProperty]` on `public partial` auto-implemented properties only:
+  ```csharp
+  [ObservableProperty]
+  public partial bool IsBusy { get; set; }
+  ```
+  The source generator creates a private backing field `_isBusy` automatically.
+- ❌ **WRONG** (triggers MVVMTK0042): Never use `[ObservableProperty]` on private fields:
+  ```csharp
+  // DON'T DO THIS - triggers MVVMTK0042
+  [ObservableProperty]
+  private bool _isBusy;  // ❌
+  ```
+- ⚠️ **MVVMTK0042 Prevention**: The `[ObservableProperty]` attribute MUST only be applied to `public partial` auto-implemented properties (`{ get; set; }`). Never apply it to:
+  - Private fields (e.g., `private bool _isBusy`)
+  - Existing properties with manual backing fields
+  - Non-partial classes
+  - Properties without `{ get; set; }` accessors
 - Use `[RelayCommand]` for command implementations
 - Example:
   ```csharp

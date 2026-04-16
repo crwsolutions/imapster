@@ -10,19 +10,19 @@ public partial class PromptEditorPopupViewModel : ObservableObject
     private readonly IPromptRepository _promptRepository;
 
     [ObservableProperty]
-    private string _verwijderRegels;
+    public partial string VerwijderRegels { get; set; } = EmailAiService.DefaultVerwijderRegels;
 
     [ObservableProperty]
-    private string _behoudenRegels;
+    public partial string BehoudenRegels { get; set; } = EmailAiService.DefaultBehoudenRegels;
 
     [ObservableProperty]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
-    private string _staticIntro;
+    public partial string StaticIntro { get; set; } = EmailAiService.StaticIntro;
 
     [ObservableProperty]
-    private string _staticOutputFormat;
+    public partial string StaticOutputFormat { get; set; } = EmailAiService.StaticOutputFormat;
 
     public object? Result { get; set; }
 
@@ -30,10 +30,6 @@ public partial class PromptEditorPopupViewModel : ObservableObject
     {
         _logger = logger;
         _promptRepository = promptRepository;
-        _verwijderRegels = EmailAiService.DefaultVerwijderRegels;
-        _behoudenRegels = EmailAiService.DefaultBehoudenRegels;
-        _staticIntro = EmailAiService.StaticIntro;
-        _staticOutputFormat = EmailAiService.StaticOutputFormat;
     }
 
     [RelayCommand]
