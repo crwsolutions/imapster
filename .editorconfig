@@ -1,0 +1,185 @@
+# All files in this solution
+root = true
+
+##############################
+# General                    #
+##############################
+
+[*.cs]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.xaml]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.csproj]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.slnx]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.json]
+charset = utf-8
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.resx]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Exclude binary and generated files
+[*.{png,jpg,jpeg,gif,bmp,ico,svg,ttf,woff,woff2,mp3,mp4,webm,webp,zip,exe,dll,so,dylib}]
+indent_size = 4
+indent_style = space
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# Exclude node_modules and build output
+[/node_modules/]
+indent_size = 4
+indent_style = space
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+[/bin/]
+indent_size = 4
+indent_style = space
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+[/obj/]
+indent_size = 4
+indent_style = space
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+##############################
+# C# Coding Rules            #
+##############################
+
+# Organize using statements
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = inside_system_namespaces:silent
+csharp_file_level_using_directive_placement = inside_system_namespaces:silent
+
+## file-level using directive order (project-level usings first, then file-level)
+#[**/Properties/GlobalUsings.cs]
+#dotnet_sort_system_directives_first = true
+
+# var when applicable
+csharp_style_var_for_built_in_types = true:none
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_elsewhere = true:silent
+
+# Expression-bodied members
+csharp_style_expression_body_method = when_on_single_line:silent
+csharp_style_expression_body_operator = always:silent
+csharp_style_expression_body_lambda = always:silent
+csharp_style_expression_property = when_on_single_line:silent
+csharp_style_expression_indexer = when_on_single_line:silent
+
+# Expression body for delegates
+dotnet_expression_body_delegate = when_on_single_line:silent
+
+# Preferred modifier order
+dotnet_style_require_accessibility_modifiers_at_start = true
+dotnet_style_prefer_default_modifier = true
+
+# Parentheses preferences
+csharp_space_after_cast = false
+csharp_space_after_colons_in_constructor_initializer = true
+csharp_space_after_colons_in_base_type_declaration = true
+csharp_space_after_colons_in_interpolated_string_expression = true
+csharp_space_after_commas = true
+csharp_space_after_dot = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_after_semicolons_in_for_statement = true
+csharp_space_around_declaration_statement_declaration = true
+csharp_space_before_colons_in_constructor_initializer = true
+csharp_space_before_colons_in_base_type_declaration = true
+csharp_space_before_colons_in_interpolated_string_expression = true
+csharp_space_before_commas = false
+csharp_space_before_dot = false
+csharp_space_before_keywords_in_control_flow_statements = true
+csharp_space_before_semicolons_in_for_statement = false
+csharp_space_around_declaration_statement_declaration = true
+csharp_space_between_empty_square_brackets = false
+csharp_space_between_square_brackets = false
+
+# Braces placement
+dotnet_style_parentheses_in_arithmetic_binary_logical_or_string_concat_expression = never_when_unnecessary:none
+dotnet_style_parentheses_in_other_expression = never_when_unnecessary:none
+
+# Naming conventions
+csharp_naming_method_local_rules = local_methods_must_follow_camel_case_convention:silent
+csharp_naming_method_rules = static_methods_must_follow_pascal_case_convention:silent
+csharp_naming_property_local_rules = local_properties_must_follow_camel_case_convention:silent
+csharp_naming_property_rules = static_properties_must_follow_pascal_case_convention:silent
+csharp_naming_field_local_rules = local_fields_must_follow_camel_case_convention:silent
+csharp_naming_field_rules = static_fields_must_follow_pascal_case_convention:silent
+
+##############################
+# .NET Coding Rules          #
+##############################
+
+# Predefined type preferences
+dotnet_style_predefined_type_for_locals_parameters = true:silent
+dotnet_style_predefined_type_for_member_access = true:silent
+
+# Pattern matching
+dotnet_style_pattern_matching_over_as_with_null_check = always:silent
+dotnet_style_pattern_matching_over_is_with_cast_check = always:silent
+dotnet_style_explicit_tuple_names = true:silent
+
+# Null checking
+dotnet_style_coalesce_expression = always:silent
+dotnet_style_null_propagation = always:silent
+
+# Simplify LINQ
+dotnet_style_collection_initializer = true:silent
+dotnet_style_explicit_tuple_names = true:silent
+dotnet_style_namespace_match_folder = always
+
+# Predefined members
+dotnet_style_prefer_predefined_static_member_types = true:silent
+
+##############################
+# Overrules                    #
+##############################
+
+# Tests project - allow more permissive rules
+[src/Imapster.HtmlViewer.Tests/**.cs]
+csharp_style_expression_body_method = always:silent
+csharp_style_expression_property = always:silent
+
+# Demo project
+[src/Imapster.HtmlViewer.Demo/**.cs]
+csharp_style_expression_body_method = always:silent
+csharp_style_expression_property = always:silent

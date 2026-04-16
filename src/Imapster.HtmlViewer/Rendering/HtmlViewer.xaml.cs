@@ -249,7 +249,7 @@ public partial class HtmlViewer : ContentView
         if (node.Type == HtmlElementType.Text)
         {
             var text = node.TextContent ?? string.Empty;
-            return (start >= 0 && end <= text.Length) ? text.Substring(start, end - start) : text;
+            return (start >= 0 && end <= text.Length) ? text[start..end] : text;
         }
 
         var result = new System.Text.StringBuilder();
@@ -390,8 +390,11 @@ public partial class HtmlViewer : ContentView
         var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
         using var font = new SKFont(typeface) { Size = (float)node.FontSize };
 
-        var paint = new SKPaint { IsAntialias = true };
-        paint.Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString();
+        var paint = new SKPaint
+        {
+            IsAntialias = true,
+            Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
+        };
 
         if (node.Href is not null && _renderContext.IsLinksEnabled)
             paint.Color = _renderContext.LinkColor.ParseColorString();

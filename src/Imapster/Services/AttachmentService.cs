@@ -13,13 +13,11 @@ public class AttachmentService : IAttachmentService
 {
     private readonly IImapSyncService _imapSyncService;
     private readonly IAccountRepository _accountRepository;
-    private readonly ILogger<AttachmentService> _logger;
 
-    public AttachmentService(IImapSyncService imapSyncService, IAccountRepository accountRepository, ILogger<AttachmentService> logger)
+    public AttachmentService(IImapSyncService imapSyncService, IAccountRepository accountRepository)
     {
         _imapSyncService = imapSyncService;
         _accountRepository = accountRepository;
-        _logger = logger;
     }
 
     public async Task<string> ArchiveAttachmentAsync(int accountId, string folderId, uint emailId, string attachmentName)
@@ -53,7 +51,6 @@ public class AttachmentService : IAttachmentService
         // Use shared download method
         await DownloadAttachmentToPathAsync(message, attachmentName, fullPath);
 
-        _logger.LogInformation("Archived attachment '{FileName}' to '{Path}'", attachmentName, fullPath);
         return fullPath;
     }
 
@@ -77,7 +74,6 @@ public class AttachmentService : IAttachmentService
         // Use shared download method
         await DownloadAttachmentToPathAsync(message, attachmentName, fullPath);
 
-        _logger.LogInformation("Saved attachment '{FileName}' to temp path '{Path}'", attachmentName, fullPath);
         return fullPath;
     }
 
