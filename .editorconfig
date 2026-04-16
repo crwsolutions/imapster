@@ -12,6 +12,17 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+# ** Diagnostic Suppressions ** #
+
+# IDE0290: Use implicit local (suppress - prefer explicit types for clarity)
+dotnet_diagnostic.IDE0290.severity = none
+
+# CA1822: Member can be made static (suppress - intentional for DI/testability)
+dotnet_diagnostic.CA1822.severity = none
+
+# IDE0305: Collect can be used (suppress - explicit type preferred)
+dotnet_diagnostic.IDE0305.severity = none
+
 [*.xaml]
 charset = utf-8
 indent_size = 4
