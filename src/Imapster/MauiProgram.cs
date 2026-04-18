@@ -78,7 +78,6 @@ namespace Imapster
 
             builder.Services.AddTransientPopup<PromptEditorPopup, PromptEditorPopupViewModel>();
             builder.Services.AddTransientPopup<MoveFolderPopup, MoveFolderPopupViewModel>();
-            builder.Services.AddTransientPopup<EmailDetailsPopup, EmailDetailsViewModel>();
 
             var app = builder.Build();
             Database.Initialize();

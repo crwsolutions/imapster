@@ -8,6 +8,4 @@ public interface IDataGridItem
     object? GetValue(string key);
 
     bool IsSelected { get; set; }
-
-    void OnDoubleTapped();
 }

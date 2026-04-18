@@ -15,9 +15,6 @@ namespace Imapster.ContentViews
     private bool _sortAscending = true;
     private Dictionary<string, List<object?>> _filters = new();
     private int _lastSelectedIndex = -1;
-    private int _clickCount = 0;
-    private DateTime _lastClickTime;
-    private const int DoubleClickThreshold = 300; // milliseconds
 
         public IEnumerable ItemsSource
         {
@@ -60,6 +57,24 @@ namespace Imapster.ContentViews
 
         public static readonly BindableProperty CountProperty =
             BindableProperty.Create(nameof(Count), typeof(int), typeof(DataGridView), default(int), BindingMode.TwoWay);
+
+        public event EventHandler<IDataGridItem>? SelectionChanged;
+
+        public object? SelectedItem
+        {
+            get => GetValue(SelectedItemProperty);
+            set => SetValue(SelectedItemProperty, value);
+        }
+
+        public static readonly BindableProperty SelectedItemProperty =
+            BindableProperty.Create(nameof(SelectedItem), typeof(object), typeof(DataGridView),
+                null, BindingMode.TwoWay, propertyChanged: OnSelectedItemChanged);
+
+        private static void OnSelectedItemChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            // This is called when the bound SelectedEmail property changes externally
+            // We don't need to do anything here as the selection is already handled
+        }
 
         public DataGridView() => InitializeComponent();
 
@@ -525,28 +540,11 @@ namespace Imapster.ContentViews
                 return;
             }
 
-            // Double click detection
-            var currentTime = DateTime.Now;
-            var timeSinceLastClick = currentTime - _lastClickTime;
+            // Update SelectedItem for single-click selection
+            SelectedItem = rowItem;
 
-            if (timeSinceLastClick.TotalMilliseconds <= DoubleClickThreshold && !IsCtrlPressed() && !IsShiftPressed())
-            {
-                _clickCount++;
-                if (_clickCount >= 2)
-                {
-                    // Double click detected
-                    rowItem.IsSelected = false;
-                    rowItem.OnDoubleTapped();
-                    _clickCount = 0;
-                    return;
-                }
-            }
-            else
-            {
-                _clickCount = 1;
-            }
-
-            _lastClickTime = currentTime;
+            // Raise selection changed event
+            SelectionChanged?.Invoke(this, rowItem);
 
             if (IsCtrlPressed()) // Ctrl+klik: toggle selectie van deze rij
             {

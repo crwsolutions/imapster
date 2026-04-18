@@ -148,31 +148,9 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         _ => null,
     };
 
-    [RelayCommand]
-    private async Task ShowDetailsAsync()
-    {
-        var popupService = App.Services.GetRequiredService<IPopupService>();
-
-        var parameters = new Dictionary<string, object>
-        {
-            { "email", this }
-        };
-
-        await popupService.ShowPopupAsync<EmailDetailsViewModel>(
-            Shell.Current,
-            options: new PopupOptions { Shape = null, Shadow = null },
-            shellParameters: parameters
-        );
-    }
-
     public bool Equals(EmailViewModel? other) =>
         other is not null &&
         Id == other.Id &&
         FolderId == other.FolderId &&
         AccountId == other.AccountId;
-
-    public void OnDoubleTapped()
-    {
-        _ = ShowDetailsAsync();
-    }
 }

@@ -1,5 +1,6 @@
 using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
+using Microsoft.UI.Xaml.Controls;
 using SkiaSharp;
 using System.Diagnostics;
 using SKPaintSurfaceEventArgs = SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs;
@@ -24,6 +25,7 @@ public partial class HtmlViewer : ContentView
         typeof(string),
         typeof(HtmlViewer),
         null,
+        BindingMode.TwoWay,
         propertyChanged: OnHtmlChanged);
 
     public string? Html
@@ -194,9 +196,19 @@ public partial class HtmlViewer : ContentView
         {
             _htmlRoot = null;
             _layoutRoot = null;
+            InvalidateRender();
             return;
         }
 
+        // Parse the HTML content
+        _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
+        
+        // Perform layout with current width if available
+        if (_lastRenderedWidth > 0)
+        {
+            _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)_lastRenderedWidth);
+        }
+        
         InvalidateRender();
     }
 

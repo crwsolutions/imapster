@@ -42,6 +42,9 @@ public partial class MainViewModel : BaseViewModel
     {
         if (value is null || _isLoading) return;
 
+        // Reset selected email when folder changes
+        SelectedEmail = null;
+
         _ = LoadEmailsForFolderAsync(value.Id);
     }
 
@@ -68,6 +71,9 @@ public partial class MainViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial ObservableCollection<IDataGridItem> DisplayedItems { get; set; } = [];
+
+    [ObservableProperty]
+    public partial EmailViewModel? SelectedEmail { get; set; }
 
     public MainViewModel(IImapSyncService imapSyncService,
                           IFolderRepository folderRepository,
