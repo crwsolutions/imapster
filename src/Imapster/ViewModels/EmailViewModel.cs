@@ -30,7 +30,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     [NotifyPropertyChangedFor(nameof(BodyHtml))]
     public partial string Body { get; set; } = default!;
 
-    public string BodyHtml => HtmlRegEx.IsMatch(Body) ? Body : $"<html><pre>{Body}</pre></html>";
+    public string BodyHtml => HtmlRegEx.IsMatch(Body) ?  Body.Trim() : $"<html><pre>{Body.Trim()}</pre></html>";
 
     [ObservableProperty]
     public partial bool IsRead { get; set; } = default!;
