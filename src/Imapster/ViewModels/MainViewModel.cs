@@ -383,10 +383,7 @@ public partial class MainViewModel : BaseViewModel
                     await _emailRepository.UpdateEmailAsync(email);
 
                     i = Interlocked.Increment(ref i);
-                    //await MainThread.InvokeOnMainThreadAsync(() =>
-                    //{
                     StatusText = $"Generated summary for email '{email.Subject}' : Delete? -> {email.AiDelete}";
-                    //});
                 }
                 catch (Exception ex)
                 {
@@ -395,10 +392,7 @@ public partial class MainViewModel : BaseViewModel
                     email.AiSummary = ex.Message;
 
                     i = Interlocked.Increment(ref i);
-                    //await MainThread.InvokeOnMainThreadAsync(() =>
-                    //{
                     StatusText = $"Error generating summary for '{email.Subject}': {ex.Message}";
-                    //});
                 }
             });
         }

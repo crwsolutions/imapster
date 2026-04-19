@@ -1,7 +1,3 @@
-using Microsoft.Maui.Controls;
-using Imapster.ViewModels;
-using System.Runtime.CompilerServices;
-
 namespace Imapster.ContentViews;
 
 public partial class EmailDetailsView : ContentView
@@ -22,12 +18,17 @@ public partial class EmailDetailsView : ContentView
         {
             view.UpdateVisibility();
         }
+
+        if (newValue is EmailViewModel newEmail)
+        {
+            newEmail.UpdateCanArchive();
+        }
     }
 
     public EmailDetailsView()
     {
         InitializeComponent();
-        
+
         // Initialize to Html tab (default)
         ShowTab("html");
     }
@@ -54,7 +55,7 @@ public partial class EmailDetailsView : ContentView
     {
         var primaryColor = (Color)Application.Current!.Resources["Primary"];
         var grayColor = (Color)Application.Current!.Resources["Gray400"];
-        
+
         if (tab == "html")
         {
             HtmlContentGrid.IsVisible = true;

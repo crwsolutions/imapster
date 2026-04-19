@@ -1,4 +1,3 @@
-﻿using Imapster.Repositories;
 using Imapster.Services;
 
 internal static class AddViewsExtension
@@ -7,9 +6,9 @@ internal static class AddViewsExtension
     {
 
         // Register views and view models
-        builder.Services.AddTransient<MainPage, MainViewModel>();
+        builder.Services.AddSingleton<MainPage, MainViewModel>();
 
-        builder.Services.AddTransient<EmailAiService>();
+        builder.Services.AddSingleton<EmailAiService>();
 
         return builder;
     }
