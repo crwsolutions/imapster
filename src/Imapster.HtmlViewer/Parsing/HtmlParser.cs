@@ -35,6 +35,10 @@ public sealed partial class HtmlParser
             }
         }
 
+        // Clean up: remove text nodes that contain only whitespace
+        // This prevents extra spacing around block elements and BR tags
+        CleanWhitespaceNodes(root);
+
         return root;
     }
 
@@ -48,6 +52,7 @@ public sealed partial class HtmlParser
 
         ParseInlineStyles(element, node.Style, node.Type);
         ParseAttributes(element, node);
+        ParseDeprecatedAttributes(element, node.Style);
 
         // Check if this is a preformatted element
         var isCurrentPreformatted = isPreformatted || node.Type == HtmlElementType.Pre;
@@ -82,6 +87,10 @@ public sealed partial class HtmlParser
             case HtmlElementType.Bold: node.Style.FontWeightBold = true; break;
             case HtmlElementType.Italic: node.Style.FontStyleItalic = true; break;
             case HtmlElementType.Underline: node.Style.TextDecoration = TextDecoration.Underline; break;
+            case HtmlElementType.Center: 
+                node.Style ??= new HtmlStyle();
+                node.Style.TextAlign = TextAlignment.Center; 
+                break;
         }
 
         foreach (var child in element.ChildNodes)
@@ -335,6 +344,40 @@ public sealed partial class HtmlParser
         }
     }
 
+    /// <summary>
+    /// Parses deprecated HTML attributes (like 'align') and converts them to CSS styles.
+    /// This handles legacy HTML that uses deprecated attributes for styling.
+    /// Only applies the deprecated attribute if the style hasn't been explicitly set.
+    /// </summary>
+    private void ParseDeprecatedAttributes(IHtmlElement element, HtmlStyle style)
+    {
+        // Handle deprecated 'align' attribute on td, th, div, p, etc.
+        // Only apply if text-align hasn't been explicitly set via style attribute
+        var alignAttr = element.GetAttribute("align");
+        if (!string.IsNullOrEmpty(alignAttr))
+        {
+            var alignValue = alignAttr.ToLowerInvariant();
+            Imapster.HtmlViewer.Parsing.TextAlignment alignment = alignValue switch
+            {
+                "left" => Imapster.HtmlViewer.Parsing.TextAlignment.Left,
+                "center" => Imapster.HtmlViewer.Parsing.TextAlignment.Center,
+                "right" => Imapster.HtmlViewer.Parsing.TextAlignment.Right,
+                "justify" => Imapster.HtmlViewer.Parsing.TextAlignment.Justify,
+                _ => Imapster.HtmlViewer.Parsing.TextAlignment.Left
+            };
+
+            // Only apply align attribute if text-align is still at its default (Left)
+            // This prevents align from overriding explicit style attribute values
+            if (alignment != Imapster.HtmlViewer.Parsing.TextAlignment.Left || alignValue == "left")
+            {
+                if (style.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Left)
+                {
+                    style.TextAlign = alignment;
+                }
+            }
+        }
+    }
+
     private HtmlElementType MapElementType(string tagName) => tagName.ToLowerInvariant() switch
     {
         "p" => HtmlElementType.Paragraph,
@@ -368,6 +411,7 @@ public sealed partial class HtmlParser
         "footer" => HtmlElementType.Footer,
         "nav" => HtmlElementType.Nav,
         "main" => HtmlElementType.Main,
+        "center" => HtmlElementType.Center,
         "code" => HtmlElementType.Code,
         "q" => HtmlElementType.Quote,
         "cite" => HtmlElementType.Cite,
@@ -386,9 +430,127 @@ public sealed partial class HtmlParser
     };
 
     /// <summary>
+    /// Removes text nodes that contain only whitespace (spaces).
+    /// These typically come from formatting/indentation in the source HTML and don't contribute to content.
+    /// Preserves non-breaking spaces (&nbsp;) as they are intentional content.
+    /// </summary>
+    private void CleanWhitespaceNodes(HtmlNode node)
+    {
+        for (int i = node.Children.Count - 1; i >= 0; i--)
+        {
+            var child = node.Children[i];
+
+            // Remove text nodes that are only whitespace (but NOT non-breaking spaces)
+            // Non-breaking spaces (U+00A0) are intentional content
+            if (child.Type == HtmlElementType.Text && 
+                !string.IsNullOrEmpty(child.TextContent) &&
+                !child.TextContent.Contains('\u00A0') &&
+                string.IsNullOrWhiteSpace(child.TextContent))
+            {
+                node.Children.RemoveAt(i);
+            }
+            else
+            {
+                // Recursively clean children
+                CleanWhitespaceNodes(child);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Trims collapsible whitespace from text nodes according to HTML whitespace rules.
+    /// Removes leading/trailing spaces from text nodes that come after/before block-level elements or BR tags.
+    /// Only trims actual space characters (U+0020), not all whitespace, to preserve formatting intent.
+    /// This ensures that formatted (indented/newline-separated) HTML renders the same as single-line HTML.
+    /// </summary>
+    private void TrimCollapsibleWhitespace(HtmlNode node)
+    {
+        // Process all children recursively
+        for (int i = 0; i < node.Children.Count; i++)
+        {
+            var child = node.Children[i];
+
+            // Check if this is a text node
+            if (child.Type == HtmlElementType.Text && !string.IsNullOrEmpty(child.TextContent))
+            {
+                var originalContent = child.TextContent;
+
+                // Check if we should trim leading whitespace
+                // Trim only if this is the first child or the previous sibling is a block element or BR
+                // AND the text starts with space characters
+                if ((i == 0 || IsBlockElement(node.Children[i - 1]) || node.Children[i - 1].Type == HtmlElementType.LineBreak) &&
+                    child.TextContent.StartsWith(" "))
+                {
+                    child.TextContent = child.TextContent.TrimStart(' ');
+                }
+
+                // Check if we should trim trailing whitespace
+                // Trim only if this is the last child or the next sibling is a block element or BR
+                // AND the text ends with space characters
+                if ((i == node.Children.Count - 1 || IsBlockElement(node.Children[i + 1]) || node.Children[i + 1].Type == HtmlElementType.LineBreak) &&
+                    child.TextContent.EndsWith(" "))
+                {
+                    child.TextContent = child.TextContent.TrimEnd(' ');
+                }
+
+                // Remove text nodes that became empty after trimming (but log if content changed unexpectedly)
+                if (string.IsNullOrEmpty(child.TextContent) && !string.IsNullOrEmpty(originalContent))
+                {
+                    node.Children.RemoveAt(i);
+                    i--;
+                }
+            }
+            else
+            {
+                // Recursively process non-text children
+                TrimCollapsibleWhitespace(child);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Determines if an HTML element is a block-level element.
+    /// Block-level elements create new formatting contexts and boundaries where whitespace collapses.
+    /// Note: LineBreak (BR) is not included as a block element for whitespace trimming purposes,
+    /// since it's technically an inline element that should preserve surrounding whitespace handling.
+    /// </summary>
+    private bool IsBlockElement(HtmlNode node)
+    {
+        return node.Type switch
+        {
+            HtmlElementType.Div or
+            HtmlElementType.Paragraph or
+            HtmlElementType.Heading or
+            HtmlElementType.UnorderedList or
+            HtmlElementType.OrderedList or
+            HtmlElementType.ListItem or
+            HtmlElementType.Blockquote or
+            HtmlElementType.Pre or
+            HtmlElementType.HorizontalRule or
+            HtmlElementType.Section or
+            HtmlElementType.Article or
+            HtmlElementType.Header or
+            HtmlElementType.Footer or
+            HtmlElementType.Nav or
+            HtmlElementType.Main or
+            HtmlElementType.Center or
+            HtmlElementType.Table or
+            HtmlElementType.TableHeader or
+            HtmlElementType.TableBody or
+            HtmlElementType.TableFooter or
+            HtmlElementType.TableRow or
+            HtmlElementType.TableCell or
+            HtmlElementType.TableHeaderCell or
+            HtmlElementType.DocumentFragment => true,
+            _ => false
+        };
+    }
+
+    /// <summary>
     /// Normalizes whitespace in HTML text nodes according to HTML standards.
     /// Collapses multiple spaces/newlines into single spaces but preserves intentional spaces.
     /// For preformatted text, preserves all whitespace including newlines.
+    /// Handles leading/trailing whitespace at block boundaries appropriately.
     /// </summary>
     private string NormalizeWhitespace(string text, bool isPreformatted = false)
     {
@@ -408,6 +570,10 @@ public sealed partial class HtmlParser
         var normalized = Regex.Replace(withPlaceholder, @"\s+", " ");
 
         // Restore non-breaking spaces
-        return normalized.Replace(placeholder, "\u00A0");
+        var result = normalized.Replace(placeholder, "\u00A0");
+
+        // Return the normalized text - leading/trailing space trimming is handled at the
+        // caller level where we know the context (block boundaries, adjacent elements)
+        return result;
     }
 }

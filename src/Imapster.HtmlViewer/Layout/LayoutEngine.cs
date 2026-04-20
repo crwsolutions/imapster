@@ -117,7 +117,9 @@ public sealed class LayoutEngine
             BorderLeftColor = mergedStyle.BorderLeftColor,
             BorderRightColor = mergedStyle.BorderRightColor,
             BorderTopColor = mergedStyle.BorderTopColor,
-            BorderBottomColor = mergedStyle.BorderBottomColor
+            BorderBottomColor = mergedStyle.BorderBottomColor,
+            Width = mergedStyle.WidthSet ? mergedStyle.Width : 0,
+            WidthSet = mergedStyle.WidthSet
         };
 
         // Apply default margins for block elements if not explicitly set
@@ -144,6 +146,13 @@ public sealed class LayoutEngine
         {
             // Handle text nodes directly
             LayoutTextNode(layoutNode, availableWidth);
+        }
+        else if (layoutNode.HtmlNode?.Type == HtmlElementType.LineBreak)
+        {
+            // BR elements create a line break with minimal height (just line height)
+            // We use the font size as a reasonable line height
+            layoutNode.Height = layoutNode.FontSize;
+            layoutNode.Width = 0;
         }
 
         return layoutNode;
@@ -243,6 +252,7 @@ public sealed class LayoutEngine
             HtmlElementType.Footer or
             HtmlElementType.Nav or
             HtmlElementType.Main or
+            HtmlElementType.Center or
             HtmlElementType.Table or
             HtmlElementType.TableHeader or
             HtmlElementType.TableBody or
@@ -322,7 +332,8 @@ public sealed class LayoutEngine
                 LayoutBlockNode(child, innerWidth);
             }
 
-            child.X = node.PaddingLeft + node.BorderLeftWidth;
+            // Position the child element
+            child.X = CalculateBlockChildXPosition(node, child, contentWidth);
             child.Y = currentY + child.MarginTop;
             currentY += child.Height + child.MarginTop + child.MarginBottom;
             totalHeight += child.Height + child.MarginTop + child.MarginBottom;
@@ -344,10 +355,12 @@ public sealed class LayoutEngine
             {
                 // Create line boxes that wrap all inline content together
                 var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth);
-                node.LineBoxes = lines;
 
                 // Distribute inline elements across lines based on text positions
                 LayoutInlineChildrenOnLines(inlineChildren, lines, inlineContent, node);
+
+                // Always set node.LineBoxes for rendering, but children also have their own
+                node.LineBoxes = lines;
 
                 var inlineHeight = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
                 currentY += inlineHeight;
@@ -630,6 +643,11 @@ public sealed class LayoutEngine
             {
                 textParts.Add((child.HtmlNode.TextContent ?? string.Empty, child));
             }
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+            {
+                // LineBreak elements insert a newline character to force line break
+                textParts.Add(("\n", child));
+            }
             else if (child.LayoutType == LayoutType.Inline)
             {
                 CollectInlineTextWithNodes(child, textParts);
@@ -908,9 +926,9 @@ public sealed class LayoutEngine
                 currentLine.Y = currentY;
                 currentLine.StartCharIndex = lineStartChar;
                 lines.Add(currentLine);
+                currentY += lineHeight; // Move to next line after adding content
             }
 
-            currentY += lineHeight;
             charIndex += 1; // Account for the newline character
         }
 
@@ -1090,7 +1108,7 @@ public sealed class LayoutEngine
                 {
                     CharIndex = charIndex + i,
                     X = currentX,
-                    Y = line.Baseline
+                    Y = line.Y + line.Baseline
                 });
 
                 currentX += charWidth;
@@ -1142,6 +1160,34 @@ public sealed class LayoutEngine
         var italic = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
 
         return SKTypeface.FromFamilyName(node.FontFamily ?? _defaultFontFamily, style, SKFontStyleWidth.Normal, italic);
+    }
+
+    /// <summary>
+    /// Calculates the X position for a block child element, taking into account text alignment.
+    /// </summary>
+    private double CalculateBlockChildXPosition(LayoutNode parentNode, LayoutNode childNode, double availableWidth)
+    {
+        var paddingLeft = parentNode.PaddingLeft + parentNode.BorderLeftWidth;
+
+        // If child has auto width, it spans the available width, so no centering needed
+        if (!childNode.WidthSet || childNode.Width >= availableWidth)
+        {
+            return paddingLeft;
+        }
+
+        // Apply text-align to center/right-align block children
+        if (parentNode.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Center)
+        {
+            return paddingLeft + (availableWidth - childNode.Width) / 2;
+        }
+        else if (parentNode.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Right)
+        {
+            return paddingLeft + availableWidth - childNode.Width;
+        }
+        else
+        {
+            return paddingLeft;
+        }
     }
 
     /// <summary>
@@ -1225,6 +1271,11 @@ public sealed class LayoutEngine
                 childRanges.Add((charIndex, charIndex + text.Length, child));
                 charIndex += text.Length;
             }
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+            {
+                // LineBreak elements consume a newline character in the combined text
+                charIndex += 1;
+            }
             else if (child.LayoutType == LayoutType.Inline)
             {
                 var text = CollectTextFromNode(child);
@@ -1268,11 +1319,12 @@ public sealed class LayoutEngine
                     child.Height = lineHeight;
 
                     // Create or append LineBox for this text on this line
+                    // Y is the offset relative to child.Y (which is lineStartY)
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
-                        Y = 0,
+                        Y = 0,  // LineBox Y is relative to child.Y
                         Width = textWidth,
                         Height = lineHeight,
                         Baseline = commonBaseline
@@ -1294,11 +1346,12 @@ public sealed class LayoutEngine
                     child.Height = lineHeight;
 
                     // Create or append LineBox for this inline element on this line
+                    // Y is the offset relative to child.Y (which is lineStartY)
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
-                        Y = 0,
+                        Y = 0,  // LineBox Y is relative to child.Y
                         Width = textWidth,
                         Height = lineHeight,
                         Baseline = commonBaseline

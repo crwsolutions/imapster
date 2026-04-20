@@ -227,6 +227,64 @@ public class LargeContentLayoutTests
         // Assert - Verify that the layout height is less than 10000 as requested
         Assert.NotNull(layoutRoot);
         Assert.True(layoutRoot.Height > 0, "Layout should have a positive height");
-        Assert.True(layoutRoot.Height < 10000, $"Layout height {layoutRoot.Height} should be less than 10000");
+                Assert.True(layoutRoot.Height < 10000, $"Layout height {layoutRoot.Height} should be less than 10000");
+    }
+
+    [Fact]
+    public void Layout_FbtoEmail_MultipleBrTagsCreateSeparateLines()
+    {
+        // Arrange - The exact HTML from the user's report (with html and body tags)
+        var html = @"<html>
+<body>
+Beste meneer Jansen,<br /><br />Wij hebben declaraties voor u verwerkt.<br /><br /><strong><strong style=""color:#005eaa; font-weight:bold"">Op uw declaratieoverzicht ziet u welke declaraties wij voor u verwerkten</strong> </strong><br />Ook ziet u meteen de stand van uw eigen risico. Het overzicht staat klaar op Zorggebruik onder uw <a title=""Berichtenbox"" target=""_blank"" href=""https://mijnzorg.fbto.nl/"">Berichtenbox</a>. Inloggen doet u veilig &eacute;n snel met DigiD en SMS-controle of met de DigiD-app.<br /><br /><strong><strong style=""color:#005eaa; font-weight:bold"">Kunnen we nog iets voor u doen?</strong> </strong><br />Heeft u vragen? Kijk dan op <a href=""https://www.fbto.nl/zorgverzekering"">fbto.nl/zorg</a>. Of neem contact met ons op. Op <a href=""https://www.fbto.nl/verzekeringen/contact"">fbto.nl/contact</a> leest u hoe u ons bereikt.<br /><br />Hartelijke groet,<br /><br />FBTO<br/><br/>
+</body>
+</html>";
+
+        // Act
+        var htmlRoot = _htmlParser.Parse(html);
+        var layoutRoot = _layoutEngine.Layout(htmlRoot, 800);
+
+        // Assert
+        Assert.NotNull(layoutRoot);
+        Assert.True(layoutRoot.Height > 0, "Layout should have a positive height");
+
+        // Debug: Print all line boxes to see what's happening
+        System.Console.WriteLine($"Total line boxes: {layoutRoot.LineBoxes.Count}");
+        foreach (var lb in layoutRoot.LineBoxes)
+        {
+            System.Console.WriteLine($"LineBox Y={lb.Y}, Text='{lb.Text}'");
+        }
+
+        // The layoutRoot is the DocumentFragment, which contains the body
+        // The body's content is flattened into the DocumentFragment for layout purposes
+        // We should look at the layoutRoot's line boxes directly
+        Assert.True(layoutRoot.LineBoxes.Count >= 5, 
+            $"Layout should have at least 5 line boxes due to multiple <br> tags, but has {layoutRoot.LineBoxes.Count}");
+
+        // Check that lines have different Y positions (they should be on different lines)
+        if (layoutRoot.LineBoxes.Count >= 2)
+        {
+            var firstLineY = layoutRoot.LineBoxes[0].Y;
+            var secondLineY = layoutRoot.LineBoxes[1].Y;
+            
+            // Lines should have different Y positions
+            Assert.True(Math.Abs(firstLineY - secondLineY) > 0.001, "Consecutive lines should have different Y positions");
+        }
+
+        // The last few lines should contain "Hartelijke groet," and "FBTO" on separate lines
+        // Find lines with this text
+        var hartelijkeGroetLine = layoutRoot.LineBoxes.FirstOrDefault(l => l.Text?.Contains("Hartelijke") == true);
+        var fbtoLine = layoutRoot.LineBoxes.FirstOrDefault(l => l.Text?.Contains("FBTO") == true);
+
+        if (hartelijkeGroetLine != null && fbtoLine != null)
+        {
+            // They should be on different lines with different Y positions
+            Assert.True(Math.Abs(hartelijkeGroetLine.Y - fbtoLine.Y) > 0.001, 
+                $"Hartelijke groet and FBTO should be on different lines. Hartelijke Y={hartelijkeGroetLine.Y}, FBTO Y={fbtoLine.Y}");
+            
+            // FBTO should be after Hartelijke groet
+            Assert.True(fbtoLine.Y > hartelijkeGroetLine.Y, 
+                "FBTO should appear after Hartelijke groet");
+        }
     }
 }
