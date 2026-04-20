@@ -325,22 +325,52 @@ public partial class HtmlViewer : ContentView
         {
             var hasNodeLineBoxes = node.LineBoxes.Count > 0;
 
+            // If node has LineBoxes from inline content, render them directly
+            if (hasNodeLineBoxes)
+            {
+                foreach (var line in node.LineBoxes)
+                    RenderLine(canvas, line, contentOffsetX + markerWidthOffset + line.X, contentOffsetY + line.Y, node);
+            }
+
             foreach (var child in node.Children)
             {
                 if (child.LayoutType == LayoutType.Block)
                     RenderNode(canvas, child, offsetX + child.X, offsetY + child.Y);
+                else if (hasNodeLineBoxes && child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
+                {
+                    // Skip rendering individual text children when parent has LineBoxes
+                    // The LineBoxes already contain all the inline content
+                    continue;
+                }
                 else if (child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
                 {
-                    // Only render text if the node doesn't have its own LineBoxes
-                    // (text might be in parent's LineBoxes for block elements like lists)
-                    if (!hasNodeLineBoxes)
+                    // Render text child's own LineBoxes if it has them
+                    // Otherwise, rely on parent's LineBoxes
+                    if (child.LineBoxes.Count > 0)
+                    {
+                        // Child has its own LineBoxes - render them at the child's Y position
+                        var xBase = contentOffsetX + markerWidthOffset + child.X;
+                        var yBase = contentOffsetY + child.Y;
+                        foreach (var lineBox in child.LineBoxes)
+                            RenderLine(canvas, lineBox, xBase + lineBox.X, yBase + lineBox.Y, node);
+                    }
+                    else if (!hasNodeLineBoxes)
+                    {
+                        // Child has no LineBoxes and parent doesn't either - render as before
                         RenderTextNode(canvas, child, contentOffsetX + markerWidthOffset + child.X, contentOffsetY + child.Y, node);
+                    }
                 }
             }
         }
 
-        if (!hasInlineChildren && node.LineBoxes.Count > 0)
+        // Check if any text children have their own LineBoxes
+        var hasChildLineBoxes = node.Children.OfType<LayoutNode>()
+            .Where(c => c.HtmlNode?.Type == HtmlElementType.Text && c.LineBoxes.Count > 0)
+            .Any();
+
+        if (!hasInlineChildren && node.LineBoxes.Count > 0 && !hasChildLineBoxes)
         {
+            // Only render parent's LineBoxes if children aren't rendering their own
             // For list items, the LineBoxes are at Y=0, so we need to add the contentOffsetY
             // For other nodes, the LineBoxes already have the correct Y position
             var yBase = isListItem ? contentOffsetY : offsetY;
@@ -381,64 +411,66 @@ public partial class HtmlViewer : ContentView
 
     private void RenderLine(SKCanvas canvas, LineBox line, double x, double y, LayoutNode node)
     {
-        if (string.IsNullOrEmpty(line.Text))
-            return;
+        // Note: We don't skip empty lines - they still reserve vertical space for proper layout
 
-        var fontFamily = node.FontFamily ?? _renderContext.FontFamily;
-        var fontWeight = node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
-        var fontSlant = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-        var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
-        using var font = new SKFont(typeface) { Size = (float)node.FontSize };
-
-        var paint = new SKPaint
+        if (!string.IsNullOrEmpty(line.Text))
         {
-            IsAntialias = true,
-            Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
-        };
+            var fontFamily = node.FontFamily ?? _renderContext.FontFamily;
+            var fontWeight = node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+            var fontSlant = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+            var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
+            using var font = new SKFont(typeface) { Size = (float)node.FontSize };
 
-        if (node.Href is not null && _renderContext.IsLinksEnabled)
-            paint.Color = _renderContext.LinkColor.ParseColorString();
-
-        canvas.DrawText(line.Text, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
-
-        if (node.TextDecoration != TextDecoration.None)
-        {
-            var decorationY = node.TextDecoration switch
+            var paint = new SKPaint
             {
-                TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
-                TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
-                _ => (float)(y + line.Baseline + node.FontSize * 0.1)
+                IsAntialias = true,
+                Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
             };
 
-            canvas.DrawLine((float)x, decorationY, (float)(x + line.Width), decorationY, paint.Color);
-        }
+            if (node.Href is not null && _renderContext.IsLinksEnabled)
+                paint.Color = _renderContext.LinkColor.ParseColorString();
 
-        if (node.Href is not null && _renderContext.IsLinksEnabled && node.TextDecoration == TextDecoration.None)
-        {
-            var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
-            canvas.DrawLine((float)x, underlineY, (float)(x + line.Width), underlineY, _renderContext.LinkColor.ParseColorString());
-        }
+            canvas.DrawText(line.Text, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
 
-        if (_renderContext.IsSelectionEnabled && _renderContext.SelectionRange.HasValue)
-        {
-            var (start, end) = _renderContext.SelectionRange.Value;
-            var lineStart = line.StartCharIndex;
-            var lineEnd = line.EndCharIndex;
-
-            if (start < lineEnd && end > lineStart)
+            if (node.TextDecoration != TextDecoration.None)
             {
-                var selectStart = Math.Max(start, lineStart);
-                var selectEnd = Math.Min(end, lineEnd);
-                var selectLength = selectEnd - selectStart;
-
-                if (selectLength > 0)
+                var decorationY = node.TextDecoration switch
                 {
-                    var selectionText = line.Text.Substring(selectStart - lineStart, selectLength);
-                    var selectionWidth = font.MeasureText(selectionText);
-                    var selectionY = y - (float)(node.FontSize * 0.25f);
+                    TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
+                    TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
+                    _ => (float)(y + line.Baseline + node.FontSize * 0.1)
+                };
 
-                    canvas.DrawRect((float)x, (float)selectionY, (float)selectionWidth, (float)(node.FontSize * 1.25f), _renderContext.SelectionColor.ParseColorString());
-                    canvas.DrawText(selectionText, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
+                canvas.DrawLine((float)x, decorationY, (float)(x + line.Width), decorationY, paint.Color);
+            }
+
+            if (node.Href is not null && _renderContext.IsLinksEnabled && node.TextDecoration == TextDecoration.None)
+            {
+                var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
+                canvas.DrawLine((float)x, underlineY, (float)(x + line.Width), underlineY, _renderContext.LinkColor.ParseColorString());
+            }
+
+            if (_renderContext.IsSelectionEnabled && _renderContext.SelectionRange.HasValue)
+            {
+                var (start, end) = _renderContext.SelectionRange.Value;
+                var lineStart = line.StartCharIndex;
+                var lineEnd = line.EndCharIndex;
+
+                if (start < lineEnd && end > lineStart)
+                {
+                    var selectStart = Math.Max(start, lineStart);
+                    var selectEnd = Math.Min(end, lineEnd);
+                    var selectLength = selectEnd - selectStart;
+
+                    if (selectLength > 0)
+                    {
+                        var selectionText = line.Text.Substring(selectStart - lineStart, selectLength);
+                        var selectionWidth = font.MeasureText(selectionText);
+                        var selectionY = y - (float)(node.FontSize * 0.25f);
+
+                        canvas.DrawRect((float)x, (float)selectionY, (float)selectionWidth, (float)(node.FontSize * 1.25f), _renderContext.SelectionColor.ParseColorString());
+                        canvas.DrawText(selectionText, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
+                    }
                 }
             }
         }

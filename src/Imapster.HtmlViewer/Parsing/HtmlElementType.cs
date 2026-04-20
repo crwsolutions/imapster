@@ -171,6 +171,11 @@ public enum HtmlElementType
     Main,
 
     /// <summary>
+    /// Center element (deprecated but still used in legacy HTML).
+    /// </summary>
+    Center,
+
+    /// <summary>
     /// Skip element.
     /// </summary>
     Skip,
