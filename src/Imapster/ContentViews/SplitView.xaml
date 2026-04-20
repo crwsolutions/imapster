@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Grid xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:b="clr-namespace:Imapster.Behaviors"
+             xmlns:cv="clr-namespace:Imapster.ContentViews"
+             ColumnDefinitions="*, Auto, *" 
+             BackgroundColor="{StaticResource OffBlack}"
+             x:Class="Imapster.ContentViews.SplitView"
+             x:DataType="cv:SplitView">
+
+    <ContentView x:Name="LeftPanel" MinimumWidthRequest="100" />
+
+    <Border x:Name="SplitterBorder" b:CursorBehavior.Cursor="SizeWestEast"
+                Grid.Column="1" Padding="3" Margin="6" StrokeShape="RoundRectangle 8"
+                StrokeThickness="0"
+                BackgroundColor="{StaticResource Gray600}"
+                HorizontalOptions="Center">
+
+        <Path Fill="{StaticResource Gray500}" WidthRequest="18"
+                  VerticalOptions="Center"
+                  HorizontalOptions="Center">
+            <Path.Data>
+                <GeometryGroup>
+                    <!-- Linkerrij -->
+                    <EllipseGeometry Center="2,10" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="2,18" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="2,26" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="2,34" RadiusX="2" RadiusY="2" />
+                    <!-- Rechterrij -->
+                    <EllipseGeometry Center="8,10" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="8,18" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="8,26" RadiusX="2" RadiusY="2" />
+                    <EllipseGeometry Center="8,34" RadiusX="2" RadiusY="2" />
+                </GeometryGroup>
+            </Path.Data>
+        </Path>
+
+        <Border.GestureRecognizers>
+            <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
+        </Border.GestureRecognizers>
+    </Border>
+
+    <ContentView x:Name="RightPanel" MinimumWidthRequest="100" Grid.Column="2" />
+</Grid>

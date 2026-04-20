@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Imapster.ViewModels"
@@ -55,78 +55,91 @@
                              EmptyTrashCommand="{Binding EmptyTrashCommand}"/>
             </Border>
 
-            <!-- Right side: Email Grid List (2/3 width) -->
-            <cv:DataGridView  ItemsSource="{Binding Emails}" DisplayedItems="{Binding DisplayedItems}" Grid.Column="1" Grid.RowSpan="2" Count="{Binding RowCount}">
-                <cv:DataGridView.Columns>
-                    <cv:DataGridColumn Header=" " Key="" Width="20" IsFilterable="False" IsSortable="False">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <BoxView HeightRequest="10" WidthRequest="10" HorizontalOptions="Center" VerticalOptions="Center" CornerRadius="5" Color="Orange" IsVisible="{Binding IsRead, Mode=OneTime, Converter={StaticResource InvertedBoolConverter}}" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="From" Key="From" Width="200">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding From, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="To" Key="To" Width="200">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding To, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Date" Key="Date" Width="100" IsFilterable="False">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding Date, StringFormat='{0:yyyy-MM-dd}', Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="Center" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Size" Key="Size" Width="100" IsFilterable="False">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding FormattedSize, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="End" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Attachement" Key="HasAttachments" Width="100" IsFilterable="False">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="&#xf0c6;" IsVisible="{Binding HasAttachments, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" FontFamily="FontAwesomeSolid" HorizontalOptions="Center" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Topic" Key="Subject" IsFilterable="False" Width="400">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Label Text="{Binding Subject, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Category" Key="AiCategory" Width="160">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <Grid HeightRequest="28" HorizontalOptions="Center">
-                                    <BoxView BackgroundColor="{Binding AiCategory, Converter={StaticResource AiBackgroundConverter}, Mode=OneWay}" CornerRadius="6"/>
-                                    <Label Text="{Binding AiCategory, Mode=OneWay}" VerticalOptions="Center" HorizontalOptions="Center" Margin="8,0,8,0" FontSize="12" TextColor="{Binding AiCategory, Converter={StaticResource AiForegroundConverter}, Mode=OneWay}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Delete" Key="AiDelete" Width="120">
-                        <cv:DataGridColumn.ContentTemplate>
-                            <DataTemplate x:DataType="vm:EmailViewModel">
-                                <CheckBox IsChecked="{Binding AiDelete, Mode=OneWay}" IsEnabled="False" VerticalOptions="Center" HorizontalOptions="Center" />
-                            </DataTemplate>
-                        </cv:DataGridColumn.ContentTemplate>
-                    </cv:DataGridColumn>
-                    <cv:DataGridColumn Header="Delete Motivation" Key="AiDeleteMotivation"  />
-                </cv:DataGridView.Columns>
-            </cv:DataGridView>
+            <!-- Right side: SplitView with Email List (left) and Email Details (right) -->
+            <cv:SplitView Grid.Row="1" Grid.Column="1">
+                <!-- Left Content: Email List -->
+                <cv:SplitView.LeftContent>
+                    <cv:DataGridView ItemsSource="{Binding Emails}" 
+                                     DisplayedItems="{Binding DisplayedItems}" 
+                                     Count="{Binding RowCount}"
+                                     SelectedItem="{Binding SelectedEmail, Mode=TwoWay}">
+                        <cv:DataGridView.Columns>
+                            <cv:DataGridColumn Header=" " Key="" Width="20" IsFilterable="False" IsSortable="False">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <BoxView HeightRequest="10" WidthRequest="10" HorizontalOptions="Center" VerticalOptions="Center" CornerRadius="5" Color="Orange" IsVisible="{Binding IsRead, Mode=OneTime, Converter={StaticResource InvertedBoolConverter}}" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="From" Key="From" Width="200">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="{Binding From, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="To" Key="To" Width="200">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="{Binding To, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Date" Key="Date" Width="100" IsFilterable="False">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="{Binding Date, StringFormat='{0:yyyy-MM-dd}', Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="Center" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Size" Key="Size" Width="100" IsFilterable="False">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="{Binding FormattedSize, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" HorizontalOptions="End" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Attachement" Key="HasAttachments" Width="100" IsFilterable="False">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="&#xf0c6;" IsVisible="{Binding HasAttachments, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" FontFamily="FontAwesomeSolid" HorizontalOptions="Center" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Topic" Key="Subject" IsFilterable="False" Width="400">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Label Text="{Binding Subject, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Category" Key="AiCategory" Width="160">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <Grid HeightRequest="28" HorizontalOptions="Center">
+                                            <BoxView BackgroundColor="{Binding AiCategory, Converter={StaticResource AiBackgroundConverter}, Mode=OneWay}" CornerRadius="6"/>
+                                            <Label Text="{Binding AiCategory, Mode=OneWay}" VerticalOptions="Center" HorizontalOptions="Center" Margin="8,0,8,0" FontSize="12" TextColor="{Binding AiCategory, Converter={StaticResource AiForegroundConverter}, Mode=OneWay}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Delete" Key="AiDelete" Width="120">
+                                <cv:DataGridColumn.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:EmailViewModel">
+                                        <CheckBox IsChecked="{Binding AiDelete, Mode=OneWay}" IsEnabled="False" VerticalOptions="Center" HorizontalOptions="Center" />
+                                    </DataTemplate>
+                                </cv:DataGridColumn.ContentTemplate>
+                            </cv:DataGridColumn>
+                            <cv:DataGridColumn Header="Delete Motivation" Key="AiDeleteMotivation"  />
+                        </cv:DataGridView.Columns>
+                    </cv:DataGridView>
+                </cv:SplitView.LeftContent>
+
+                <!-- Right Content: Email Details -->
+                <cv:SplitView.RightContent>
+                    <cv:EmailDetailsView Email="{Binding SelectedEmail}" />
+                </cv:SplitView.RightContent>
+            </cv:SplitView>
         </Grid>
 
         <!-- Status bar -->

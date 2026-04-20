@@ -18,7 +18,7 @@
             <Grid x:Name="HeaderGrid" BackgroundColor="#2F333C" Grid.Row="1" />
 
             <!-- Data Rows -->
-            <ScrollView Grid.Row="2" VerticalScrollBarVisibility="Always" HorizontalScrollBarVisibility="Always" >
+            <ScrollView Grid.Row="2" VerticalScrollBarVisibility="Always" HorizontalScrollBarVisibility="Always" Orientation="Both">
                 <CollectionView x:Name="DataCollectionView" ItemsSource="{Binding DisplayedItems}" SelectionMode="None" Background="#2A2B2D"/>
             </ScrollView>
         </Grid>

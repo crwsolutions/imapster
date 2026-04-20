@@ -1,5 +1,6 @@
 using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
+using Microsoft.UI.Xaml.Controls;
 using SkiaSharp;
 using System.Diagnostics;
 using SKPaintSurfaceEventArgs = SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs;
@@ -24,6 +25,7 @@ public partial class HtmlViewer : ContentView
         typeof(string),
         typeof(HtmlViewer),
         null,
+        BindingMode.TwoWay,
         propertyChanged: OnHtmlChanged);
 
     public string? Html
@@ -185,6 +187,46 @@ public partial class HtmlViewer : ContentView
 
         desiredHeight += Margin.Top + Margin.Bottom;
 
+        // Conditionally set HeightRequest based on available height constraint
+        // This allows the control to use available space when content fits, or scroll when it doesn't
+        double newHeightRequest = -1;
+        
+        if (heightConstraint == double.PositiveInfinity)
+        {
+            // ScrollView scenario - set HeightRequest so ScrollView knows content height for scrolling
+            newHeightRequest = desiredHeight;
+            Debug.WriteLine($"Setting HeightRequest to {desiredHeight} (infinite height constraint)");
+        }
+        else if (desiredHeight > heightConstraint)
+        {
+            // Content is taller than available space - need scrolling
+            newHeightRequest = desiredHeight;
+            Debug.WriteLine($"Setting HeightRequest to {desiredHeight} (content taller than available space)");
+        }
+        else
+        {
+            // Content fits within available space - don't force a specific height
+            // This allows the control to use the full available height
+            newHeightRequest = -1;
+            Debug.WriteLine($"Setting HeightRequest to -1 (content fits, using available space)");
+        }
+        
+        // Track if HeightRequest needs to be updated
+        bool needsHeightRequestUpdate = HeightRequest != newHeightRequest;
+        
+        // Only update HeightRequest if it actually changed
+        if (needsHeightRequestUpdate)
+        {
+            HeightRequest = newHeightRequest;
+        }
+        
+        // Defer the measure invalidation until after the current layout pass
+        // This prevents infinite loops and ensures the layout system picks up the change
+        if (needsHeightRequestUpdate)
+        {
+            Dispatcher.Dispatch(() => InvalidateMeasure());
+        }
+
         return new Size(widthConstraint, desiredHeight);
     }
 
@@ -194,9 +236,19 @@ public partial class HtmlViewer : ContentView
         {
             _htmlRoot = null;
             _layoutRoot = null;
+            InvalidateRender();
             return;
         }
 
+        // Parse the HTML content
+        _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
+        
+        // Perform layout with current width if available
+        if (_lastRenderedWidth > 0)
+        {
+            _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)_lastRenderedWidth);
+        }
+        
         InvalidateRender();
     }
 
