@@ -87,6 +87,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<MauiXaml Update="ContentViews\GlyphMaterialButton.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Converters\Converters.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>

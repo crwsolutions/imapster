@@ -47,6 +47,7 @@ namespace Imapster
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                     fonts.AddFont("FontAwesome6FreeSolid.otf", "FontAwesomeSolid");
+                    fonts.AddFont("Inter.ttf", "Inter");
                 })
                 .AddViews()
                 //.Services.AddChatClient(ChatClientBuilderChatClientExtensions.AsBuilder(new OllamaApiClient(endpoint, modelId))

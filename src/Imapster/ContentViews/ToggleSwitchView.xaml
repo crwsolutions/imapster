@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView 
+    x:Class="Imapster.ContentViews.ToggleSwitchView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:cv="clr-namespace:Imapster.ContentViews"
+    x:DataType="cv:ToggleSwitchView">
+
+    <Grid x:Name="RootGrid"
+          HeightRequest="40"
+          WidthRequest="160"
+          BackgroundColor="#E5E5EA"
+          Padding="4"
+          ColumnDefinitions="*,*">
+
+        <!-- Witte slider - starts in left column -->
+        <Border x:Name="Slider"
+                Grid.Column="0"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                HorizontalOptions="Center"
+                VerticalOptions="Center" />
+
+        <!-- Links -->
+        <Label x:Name="LeftLabel" 
+               Grid.Column="0"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               TextColor="Black"
+               FontAttributes="Bold" />
+
+        <!-- Rechts -->
+        <Label x:Name="RightLabel" Grid.Column="1"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               TextColor="Gray"
+               FontAttributes="Bold"/>
+
+        <!-- Tap -->
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnTapped"/>
+        </Grid.GestureRecognizers>
+
+    </Grid>
+</ContentView>

@@ -37,7 +37,7 @@
             <Button Text="Disconnect" VerticalOptions="Center" Command="{Binding DisconnectCommand}" />
             <Button Text="&#xf01e;" FontFamily="FontAwesomeSolid"  VerticalOptions="Center" Command="{Binding RefreshCommand}" />
             <Button Text="&#xf544;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding AiCommand}" />
-            <Button Text="&#xf5d0;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding EditPromptCommand}" />
+            <cv:GlyphMaterialButton Glyph="&#xf5d0;" Text="Edit Prompt" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding EditPromptCommand}" Background="{StaticResource Primary}" WidthRequest="150" />
             <Button Text="&#xf2ed;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding TrashCommand}"/>
             <Button Text="&#xf56e;" FontFamily="FontAwesomeSolid" VerticalOptions="Center" Command="{Binding MoveCommand}" />
             <Entry  Placeholder="Search emails..." Text="{Binding SearchText}" HeightRequest="42" WidthRequest="400" />
@@ -71,10 +71,10 @@
                                     </DataTemplate>
                                 </cv:DataGridColumn.ContentTemplate>
                             </cv:DataGridColumn>
-                            <cv:DataGridColumn Header="From" Key="From" Width="200">
+                            <cv:DataGridColumn Header="From" Key="FromDisplay" Width="200">
                                 <cv:DataGridColumn.ContentTemplate>
                                     <DataTemplate x:DataType="vm:EmailViewModel">
-                                        <Label Text="{Binding From, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FromDisplay, Mode=OneTime}" FontAttributes="{Binding IsRead, Converter={StaticResource BoolToBoldConverter}, Mode=OneTime}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                                     </DataTemplate>
                                 </cv:DataGridColumn.ContentTemplate>
                             </cv:DataGridColumn>

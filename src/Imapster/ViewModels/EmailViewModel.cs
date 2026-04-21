@@ -24,11 +24,31 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     [GeneratedRegex("<[^>]+>", RegexOptions.IgnoreCase)]
     private static partial Regex HtmlRegEx { get; }
 
+    [GeneratedRegex(@"^""?(?<display>[^""<]+)""?\s*<.*>$")]
+    private static partial Regex EmailRegEx { get; }
     [ObservableProperty]
+
     public partial uint Id { get; set; } = default!;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FromDisplay))]
     public partial string From { get; set; } = default!;
+
+    public string FromDisplay
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(From))
+            {
+                return From ?? string.Empty;
+            }
+
+            var match = EmailRegEx.Match(From);
+            return match.Success && !string.IsNullOrWhiteSpace(match.Groups["display"].Value)
+                ? match.Groups["display"].Value.Trim()
+                : From!;
+        }
+    }
 
     [ObservableProperty]
     public partial string To { get; set; } = default!;
@@ -81,7 +101,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public partial string? AiCategory { get; set; }
 
     [ObservableProperty]
-    public partial bool? AiDelete { get; set; }
+    public partial bool AiDelete { get; set; }
 
     [ObservableProperty]
     public partial string? AiDeleteMotivation { get; set; }

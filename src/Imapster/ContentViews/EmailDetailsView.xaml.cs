@@ -30,7 +30,7 @@ public partial class EmailDetailsView : ContentView
         InitializeComponent();
 
         // Initialize to Html tab (default)
-        ShowTab("html");
+        //ShowTab("html");
     }
 
     private void UpdateVisibility()
@@ -47,28 +47,25 @@ public partial class EmailDetailsView : ContentView
         }
     }
 
-    private void OnHtmlTabClicked(object? sender, EventArgs e) => ShowTab("html");
-
-    private void OnRawTabClicked(object? sender, EventArgs e) => ShowTab("raw");
-
-    private void ShowTab(string tab)
+    private void ToggleSwitchView_Toggled(object sender, bool isShowingRaw)
     {
-        var primaryColor = (Color)Application.Current!.Resources["Primary"];
-        var grayColor = (Color)Application.Current!.Resources["Gray400"];
+            HtmlContentGrid.IsVisible = !isShowingRaw;
+            RawContentGrid.IsVisible = isShowingRaw;
+    }
 
-        if (tab == "html")
+    private void ToggleFromButtonClicked(object? sender, EventArgs e)
+    {
+        if (FromToDetailsGrid.IsVisible)
         {
-            HtmlContentGrid.IsVisible = true;
-            RawContentGrid.IsVisible = false;
-            HtmlTabButton.BackgroundColor = primaryColor;
-            RawTabButton.BackgroundColor = grayColor;
+            FromToDetailsGrid.IsVisible = false;
+            FromPill.IsVisible = true;
+            ToggleFromButton.Text = "Gegevens";
         }
         else
         {
-            HtmlContentGrid.IsVisible = false;
-            RawContentGrid.IsVisible = true;
-            HtmlTabButton.BackgroundColor = grayColor;
-            RawTabButton.BackgroundColor = primaryColor;
+            FromToDetailsGrid.IsVisible = true;
+            FromPill.IsVisible = false;
+            ToggleFromButton.Text = "Verbergen";
         }
     }
 }

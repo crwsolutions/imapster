@@ -5,8 +5,8 @@
              xmlns:local="clr-namespace:Imapster.ContentViews"
              xmlns:viewer="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
              x:Class="Imapster.ContentViews.EmailDetailsView"
-             x:DataType="local:EmailDetailsView"
-             x:Name="ThisView">
+             x:DataType="local:EmailDetailsView" Background="#060B1D"
+             x:Name="ThisView" Padding="12,12,12,12">
     <Grid RowDefinitions="*, auto">
         <!-- Empty state when no email is selected -->
         <Grid x:Name="EmptyStateGrid" RowDefinitions="*" VerticalOptions="Center" IsVisible="True">
@@ -19,76 +19,57 @@
         </Grid>
 
         <!-- Email details content -->
-        <Grid RowDefinitions="auto,*,auto" x:Name="DetailsScrollView" IsVisible="False">
+        <Grid RowDefinitions="auto,*,auto" x:Name="DetailsScrollView" IsVisible="False" RowSpacing="12">
 
             <!-- email details -->
             <VerticalStackLayout>
-                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5" ColumnSpacing="12">
-                    <Label Text="Subject:" FontAttributes="Bold" Grid.Column="0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.Subject}" Grid.Column="1" FontAttributes="Bold" />
-                </Grid>
-                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+                <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.Subject}" Grid.Column="0" FontAttributes="Bold" FontSize="28" MaxLines="2" LineBreakMode="TailTruncation" />
+                <Label Grid.Row="2" Grid.ColumnSpan="2" TextColor="{StaticResource Gray400}" Text="{Binding Source={x:Reference ThisView}, Path=Email.Date, StringFormat='{0:d MMMM yyyy HH:mm}'}" />
 
-                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
-                    <Label Text="From:" FontAttributes="Bold" Grid.Column="0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.From}" Grid.Column="1" Margin="5,0,0,0" />
-                </Grid>
+                <!-- FromDisplay pill and expandable details -->
+                <Grid ColumnDefinitions="*, *, auto" Margin="0,10,0,5" RowSpacing="8">
+                    <Grid ColumnDefinitions="Auto, Auto" x:Name="FromPill">
+                        <Border Grid.Row="0" StrokeShape="RoundRectangle 22" StrokeThickness="0" Stroke="{StaticResource Gray400}" Background="#121A2C" Padding="18,0,18,0">
+                            <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.FromDisplay}" FontAttributes="Bold" VerticalOptions="Center" TextColor="{StaticResource Secondary}" Margin="5,0,0,0" />
+                        </Border>
+                    </Grid>
 
-                <Grid ColumnDefinitions="Auto, *" Margin="0,5,0,5">
-                    <Label Text="To:" FontAttributes="Bold" Grid.Column="0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.To}" Grid.Column="1" Margin="5,0,0,0" />
-                </Grid>
+                    <Grid x:Name="FromToDetailsGrid" IsVisible="False" ColumnDefinitions="80, auto, auto" RowDefinitions="auto,auto" RowSpacing="8" Grid.Row="1">
+                        <Label Grid.Row="0" Text="From:" Margin="0,4,0,0" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Source={x:Reference ThisView}, Path=Email.From}" FontAttributes="Bold" Margin="5,4,0,0" TextColor="{StaticResource Secondary}" />
+                        <Label Grid.Row="1" Text="To:" Margin="0,4,0,0" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Source={x:Reference ThisView}, Path=Email.To}" Margin="5,4,0,0" />
+                    </Grid>
+                    <Button Grid.Column="1" x:Name="ToggleFromButton" Text="Gegevens" Clicked="ToggleFromButtonClicked" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="14" WidthRequest="100" HeightRequest="28" Margin="8,0,0,0" />
 
-                <Grid ColumnDefinitions="Auto, *, auto" Margin="0,5,0,5">
-                    <Label Text="Date:" FontAttributes="Bold" Grid.Column="0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.Date}" Grid.Column="1" Margin="5,0,0,0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.FolderId}" Grid.Column="2" Margin="5,0,0,0" />
+                    <local:ToggleSwitchView Grid.Row="0" Grid.Column="2" VerticalOptions="End" LeftText="HTML" RightText="RAW" Margin="0,0,0,6" Toggled="ToggleSwitchView_Toggled" />
                 </Grid>
-
-                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
 
             </VerticalStackLayout>
 
             <!-- Body -->
-            <Grid RowDefinitions="auto, auto, *" Grid.Row="1">
-                <Label Text="Body:" FontAttributes="Bold" Margin="0,5,0,8" />
-                <HorizontalStackLayout Margin="0,0,0,5" Spacing="2" Grid.Row="1">
-                    <Button x:Name="HtmlTabButton" Text="Html" 
-                            BackgroundColor="{StaticResource Primary}" 
-                            TextColor="White"
-                            Clicked="OnHtmlTabClicked"
-                            WidthRequest="150" HeightRequest="20" />
-                    <Button x:Name="RawTabButton" Text="Raw" 
-                            BackgroundColor="Gray" 
-                            TextColor="White"
-                            Clicked="OnRawTabClicked"
-                            WidthRequest="150" HeightRequest="20" />
-                </HorizontalStackLayout>
-                <Grid x:Name="HtmlContentGrid" IsVisible="True" Grid.Row="2">
-                    <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
+            <Border StrokeShape="RoundRectangle 6" Padding="12" StrokeThickness="0" Grid.Row="1" Background="#DDFFFFFF">
+                <Grid>
+                    <Grid x:Name="HtmlContentGrid" IsVisible="True" Grid.Row="2">
                         <ScrollView VerticalScrollBarVisibility="Always">
                             <viewer:HtmlViewer Html="{Binding Source={x:Reference ThisView}, Path=Email.BodyHtml}" />
                         </ScrollView>
-                    </Border>
+                    </Grid>
+                    <Grid x:Name="RawContentGrid" IsVisible="False" Grid.Row="2">
+                        <Editor IsReadOnly="True" Text="{Binding Source={x:Reference ThisView}, Path=Email.Body}" TextColor="{StaticResource Gray950}" />
+                    </Grid>
                 </Grid>
-                <Grid x:Name="RawContentGrid" IsVisible="False" Grid.Row="2">
-                    <Border StrokeShape="RoundRectangle 6" Background="White" Padding="12" StrokeThickness="0">
-                        <!--<ScrollView VerticalScrollBarVisibility="Always">-->
-                            <Editor IsReadOnly="True" Text="{Binding Source={x:Reference ThisView}, Path=Email.Body}" TextColor="{StaticResource Gray950}" />
-                        <!--</ScrollView>-->
-                    </Border>
-                </Grid>
-            </Grid>
+            </Border>
 
             <!-- attachement and AI information -->
             <VerticalStackLayout Grid.Row="2">
-                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+                <!--<BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />-->
                 <Label Text="Attachments:" FontAttributes="Bold" Margin="0,5,0,8" />
                 <CollectionView ItemsSource="{Binding Source={x:Reference ThisView}, Path=Email.AttachmentList, Mode=OneWay}" Margin="0,0,0,10">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:AttachmentViewModel">
-                            <Border StrokeShape="Rectangle" StrokeThickness="1" Stroke="{StaticResource Gray400}" Padding="8" Margin="0,0,0,5">
-                                <Grid ColumnDefinitions="Auto, Auto, Auto" ColumnSpacing="10">
+                            <Border StrokeShape="RoundRectangle 12" StrokeThickness="1" Stroke="{StaticResource Gray400}" VerticalOptions="Start" Padding="8" Margin="0,0,0,5">
+                                <Grid ColumnDefinitions="Auto, Auto, Auto" ColumnSpacing="10" VerticalOptions="Start">
                                     <Label Text="{Binding FileName}" Grid.Column="0" VerticalOptions="Center" TextColor="White" />
                                     <Button Text="Archive" Grid.Column="1" 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailViewModel}}, Path=ArchiveAttachmentCommand}"
@@ -106,35 +87,53 @@
                     </CollectionView.ItemTemplate>
                 </CollectionView>
 
-                <BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />
+                <!--<BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />-->
+                <HorizontalStackLayout>
+                    <Label Text="&#xe2ca;" FontFamily="FontAwesomeSolid" FontAttributes="Bold" VerticalTextAlignment="Center" Margin="8,3,12,0" FontSize="24" TextColor="{StaticResource Primary}" />
+                    <Label Text="AI INFORMATION" VerticalOptions="Center" VerticalTextAlignment="Center" FontSize="18" TextColor="{StaticResource Primary}"  />
+                </HorizontalStackLayout>
 
-                <Label Text="AI Information:" FontAttributes="Bold" Margin="0,5,0,5" />
-
-                <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto" Margin="0,5,0,5" RowSpacing="8">
-                    <Label Text="Summary:" FontAttributes="Bold" Grid.Column="0" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiSummary}" Grid.Column="1" Margin="5,0,0,0" />
-                    <Label Text="Category:" FontAttributes="Bold" Grid.Column="0" Grid.Row="1" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiCategory}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="1" />
-                    <Label Text="Delete:" FontAttributes="Bold" Grid.Column="0" Grid.Row="2" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiDelete}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="2" />
-                    <Label Text="Delete Motivation:" FontAttributes="Bold" Grid.Column="0" Grid.Row="3" />
-                    <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiDeleteMotivation}" Grid.Column="1" Margin="5,0,0,0" Grid.Row="3" />
+                <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="auto, auto, auto, auto" Margin="0,5,0,5" RowSpacing="12" ColumnSpacing="12">
+                    <Border Stroke="#1B2437" Background="#121A2C" StrokeShape="RoundRectangle 12" Padding="12" Grid.ColumnSpan="2">
+                        <VerticalStackLayout>
+                            <Label Text="Summary" TextTransform="Uppercase" FontAttributes="Bold" Margin="0,0,0,8" />
+                            <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiSummary}" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Stroke="#1B2437" Background="#121A2C" StrokeShape="RoundRectangle 12" Padding="12" Grid.Column="2">
+                        <VerticalStackLayout>
+                            <Label Text="Category" TextTransform="Uppercase" FontAttributes="Bold" Margin="0,0,0,8" />
+                            <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiCategory}"  />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Stroke="#1B2437" Background="#121A2C" StrokeShape="RoundRectangle 12" Padding="12" Grid.Row="1">
+                        <VerticalStackLayout>
+                            <Label Text="Delete ?" TextTransform="Uppercase" FontAttributes="Bold" Margin="0,0,0,12"/>
+                            <Grid ColumnDefinitions="22, *">
+                                <Label Text="&#xf058;" TextColor="#48C08F" FontFamily="FontAwesomeSolid" VerticalTextAlignment="Center" IsVisible="{Binding Source={x:Reference ThisView}, Path=Email.AiDelete}" />
+                                <Label Text="&#xf058;" TextColor="#F87171" FontFamily="FontAwesomeSolid" VerticalTextAlignment="Center" IsVisible="{Binding Source={x:Reference ThisView}, Path=Email.AiDelete, FallbackValue=False, Converter={StaticResource InvertedBoolConverter}}" />
+                                <Label Grid.Column="1" Text="Save to delete" TextColor="#48C08F" VerticalTextAlignment="Center" IsVisible="{Binding Source={x:Reference ThisView}, Path=Email.AiDelete}" />
+                                <Label Grid.Column="1" Text="Do not delete" TextColor="#F87171" VerticalTextAlignment="Center" IsVisible="{Binding Source={x:Reference ThisView}, Path=Email.AiDelete, FallbackValue=False, Converter={StaticResource InvertedBoolConverter}}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Stroke="#1B2437" Background="#121A2C" StrokeShape="RoundRectangle 12" Padding="12" Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1">
+                        <VerticalStackLayout>
+                            <Label Text="Motivation" TextTransform="Uppercase" FontAttributes="Bold" Margin="0,0,0,8" />
+                            <Label Text="{Binding Source={x:Reference ThisView}, Path=Email.AiDeleteMotivation}" FontAttributes="Italic" />
+                        </VerticalStackLayout>
+                    </Border>
                 </Grid>
 
                 <HorizontalStackLayout Spacing="10" Margin="0,10,0,0">
-                    <Button Text="Redo AI" 
+                    <local:GlyphMaterialButton Text="Redo AI" Glyph="&#xf2f9;"
                         Command="{Binding Source={x:Reference ThisView}, Path=Email.RedoAiClassificationCommand}"
                         BackgroundColor="Blue" 
                         TextColor="White" 
                         WidthRequest="150" />
-                    <Button Text="Re-fetch" 
+                    <local:GlyphMaterialButton Text="Re-fetch" Glyph="&#xf0ed;"
                         Command="{Binding Source={x:Reference ThisView}, Path= Email.ReFetchEmailCommand}"
                         BackgroundColor="Orange" 
-                        TextColor="White" 
-                        WidthRequest="150" />
-                    <Button Text="Edit Prompt" 
-                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=EditPromptCommand}"
-                        BackgroundColor="Green" 
                         TextColor="White" 
                         WidthRequest="150" />
                 </HorizontalStackLayout>
