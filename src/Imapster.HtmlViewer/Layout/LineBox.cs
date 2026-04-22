@@ -66,6 +66,17 @@ public sealed class LineBox
     public int? SelectionEnd { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this line represents an explicit line break (<br/> element).
+    /// </summary>
+    public bool IsLineBreak { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inline style spans for this line.
+    /// Each span represents a range of characters with the same inline styling.
+    /// </summary>
+    public List<InlineStyleSpan> StyleSpans { get; set; } = [];
+
+    /// <summary>
     /// Represents a character position for hit testing.
     /// </summary>
     public sealed class CharacterPosition
@@ -84,5 +95,26 @@ public sealed class LineBox
         /// Gets or sets the Y position of the character baseline.
         /// </summary>
         public double Y { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a span of characters with the same inline styling.
+    /// </summary>
+    public sealed class InlineStyleSpan
+    {
+        /// <summary>
+        /// Gets or sets the start index of this span within the line text (0-based).
+        /// </summary>
+        public int StartIndex { get; set; }
+
+        /// <summary>
+        /// Gets or sets the length of this span in characters.
+        /// </summary>
+        public int Length { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source node that provides the styling for this span.
+        /// </summary>
+        public LayoutNode? SourceNode { get; set; }
     }
 }

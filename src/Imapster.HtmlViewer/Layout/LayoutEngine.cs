@@ -359,6 +359,9 @@ public sealed class LayoutEngine
                 // Distribute inline elements across lines based on text positions
                 LayoutInlineChildrenOnLines(inlineChildren, lines, inlineContent, node);
 
+                // Add style spans to parent lines to indicate which parts belong to which children
+                BuildParentLineStyleSpans(lines, inlineContent, inlineChildren);
+
                 // Always set node.LineBoxes for rendering, but children also have their own
                 node.LineBoxes = lines;
 
@@ -477,729 +480,285 @@ public sealed class LayoutEngine
         node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
     }
 
-    /// <summary>
-    /// Layouts an inline-level node.
-    /// </summary>
     private void LayoutInlineNode(LayoutNode node, double availableWidth)
     {
-        var contentWidth = node.WidthSet ? node.Width : availableWidth - node.MarginLeft - node.MarginRight;
-        var innerWidth = contentWidth - node.PaddingLeft - node.PaddingRight - node.BorderLeftWidth - node.BorderRightWidth;
+        var lines = new List<LineBox>();
+        var lineHeight = node.FontSize * 1.2;
+        var currentX = 0.0;
+        var currentY = 0.0;
+        var currentLineWidth = 0.0;
+        var currentLineText = new System.Text.StringBuilder();
+        var currentLineSpans = new List<(string text, LayoutNode sourceNode)>();
+        var charIndex = 0;
+        var lineStartChar = 0;
+        var innerWidth = (float)(availableWidth - node.PaddingLeft - node.PaddingRight - node.BorderLeftWidth - node.BorderRightWidth);
 
-        node.ContentWidth = innerWidth;
-
-        // Check if this inline node has only text children (no nested inline elements)
-        var hasOnlyTextChildren = node.Children.All(c => c.HtmlNode?.Type == HtmlElementType.Text);
-
-        if (hasOnlyTextChildren)
-        {
-            // Collect all text content from direct text children
-            var fullText = string.Join("", node.Children.Where(c => c.HtmlNode?.Type == HtmlElementType.Text)
-                .Select(c => c.HtmlNode?.TextContent ?? string.Empty));
-
-            // Measure and break into lines
-            var lines = BreakTextIntoLines(fullText, node, innerWidth);
-            node.LineBoxes = lines;
-
-            // Calculate dimensions from line boxes
-            node.Height = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
-            node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
-
-            // Set X positions for text children so they render in sequence
-            double currentX = 0;
-            foreach (var child in node.Children)
-            {
-                if (child.HtmlNode?.Type == HtmlElementType.Text)
-                {
-                    var text = child.HtmlNode.TextContent ?? string.Empty;
-                    child.X = currentX;
-                    child.Y = 0;
-                    currentX += MeasureText(text, node);
-                    child.Width = currentX - child.X;
-                    child.Height = node.Height;
-                }
-            }
-        }
-        else
-        {
-            // Has nested inline elements - collect all text and layout as a single flowing unit
-            var textParts = new List<(string text, LayoutNode node)>();
-
-            // First pass: collect all text content in order with their style nodes
-            CollectInlineTextWithNodes(node, textParts);
-
-            if (textParts.Count == 0)
-            {
-                // No text content
-                node.LineBoxes.Clear();
-                node.Height = 0;
-                node.Width = 0;
-            }
-            else
-            {
-                // Combine all text and create a single line-breaking pass
-                var fullText = string.Concat(textParts.Select(p => p.text));
-                var lineHeight = node.FontSize * 1.2;
-                var lines = BreakTextIntoLines(fullText, node, innerWidth);
-
-                // Now distribute children across lines based on text positions
-                var charIndex = 0;
-                var childIndex = 0;
-
-                foreach (var line in lines)
-                {
-                    var lineEndChar = charIndex + (line.Text?.Length ?? 0);
-
-                    // Find which children fall into this line
-                    while (childIndex < textParts.Count && charIndex < lineEndChar)
-                    {
-                        var (childText, childNode) = textParts[childIndex];
-                        var childEndChar = charIndex + childText.Length;
-
-                        if (childEndChar <= lineEndChar)
-                        {
-                            // Child is entirely within this line
-                            childNode.Y = line.Y;
-                            childIndex++;
-                            charIndex = childEndChar;
-                        }
-                        else
-                        {
-                            // Child spans multiple lines - just set its position
-                            childNode.Y = line.Y;
-                            charIndex = lineEndChar;
-                            break;
-                        }
-                    }
-                }
-
-                // Layout children to get their widths and position them across lines
-                // We need to distribute children across lines based on their text content
-                var childTextMap = new Dictionary<LayoutNode, string>();
-                var childWidths = new Dictionary<LayoutNode, double>();
-                double runningX = 0;
-
-                foreach (var child in node.Children)
-                {
-                    if (child.LayoutType == LayoutType.Inline)
-                    {
-                        LayoutInlineNode(child, innerWidth);
-                    }
-                    else if (child.HtmlNode?.Type == HtmlElementType.Text)
-                    {
-                        LayoutTextNode(child, innerWidth);
-                    }
-
-                    var childText = child.HtmlNode?.TextContent ?? string.Empty;
-                    childTextMap[child] = childText;
-                    childWidths[child] = child.Width;
-                    runningX += child.Width;
-                }
-
-                // Now position each child on the correct line based on its text position
-                // We need to track character positions across lines and position children accordingly
-                var charPosition = 0;
-
-                foreach (var child in node.Children)
-                {
-                    var childText = childTextMap[child];
-                    var childWidth = childWidths[child];
-                    var childEndPosition = charPosition + childText.Length;
-
-                    // Find which line(s) this child spans
-                    var lineIndex = FindLineForCharacterPosition(charPosition, lines);
-
-                    if (lineIndex >= 0 && lineIndex < lines.Count)
-                    {
-                        var line = lines[lineIndex];
-                        var charOffsetInLine = charPosition - line.StartCharIndex;
-                        var textToMeasure = childText.Length > charOffsetInLine
-                            ? childText.Substring(0, charOffsetInLine)
-                            : childText;
-                        var charOffsetX = MeasureText(textToMeasure, node);
-
-                        child.Y = line.Y;
-                        child.X = line.X + charOffsetX;
-                    }
-
-                    charPosition = childEndPosition;
-                }
-
-                // Set paragraph dimensions from lines
-                node.LineBoxes = lines;
-                node.Height = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
-                node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Collects text content and their associated style nodes from inline children.
-    /// </summary>
-    private void CollectInlineTextWithNodes(LayoutNode node, List<(string text, LayoutNode node)> textParts)
-    {
         foreach (var child in node.Children)
         {
             if (child.HtmlNode?.Type == HtmlElementType.Text)
             {
-                textParts.Add((child.HtmlNode.TextContent ?? string.Empty, child));
-            }
-            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
-            {
-                // LineBreak elements insert a newline character to force line break
-                textParts.Add(("\n", child));
-            }
-            else if (child.LayoutType == LayoutType.Inline)
-            {
-                CollectInlineTextWithNodes(child, textParts);
-            }
-        }
-    }
+                var text = child.HtmlNode.TextContent ?? string.Empty;
+                var textWidth = MeasureText(text, child);
 
-    /// <summary>
-    /// Collects text content from inline nodes.
-    /// </summary>
-    private void CollectInlineText(LayoutNode node, List<string> textParts, List<HtmlStyle> styles)
-    {
-        foreach (var child in node.Children)
-        {
-            if (child.LayoutType == LayoutType.Inline)
-            {
-                CollectInlineText(child, textParts, styles);
-            }
-            else if (child.HtmlNode?.Type == HtmlElementType.Text)
-            {
-                textParts.Add(child.HtmlNode.TextContent ?? string.Empty);
-                styles.Add(child.HtmlNode.Style ?? new HtmlStyle());
-            }
-        }
-    }
-
-    /// <summary>
-    /// Breaks text into lines based on available width.
-    /// </summary>
-    private List<LineBox> BreakTextIntoLines(string text, LayoutNode node, double availableWidth)
-    {
-        var lines = new List<LineBox>();
-        var lineHeight = node.FontSize * 1.2;
-
-        // Check if this is a preformatted block
-        var isPreformatted = node.HtmlNode?.Type == HtmlElementType.Pre ||
-                             (node.Parent?.HtmlNode?.Type == HtmlElementType.Pre == true);
-
-        if (isPreformatted)
-        {
-            return BreakPreformattedText(text, node, availableWidth);
-        }
-
-        // Check if text contains explicit newlines
-        if (text.Contains('\n'))
-        {
-            return BreakTextWithNewlines(text, node, availableWidth);
-        }
-
-        // Ensure minimum available width to prevent infinite loops
-        var effectiveAvailableWidth = Math.Max(availableWidth, node.FontSize);
-
-        var words = SplitIntoWords(text);
-        var currentLine = new LineBox();
-        var currentWidth = 0.0;
-        var charIndex = 0;
-        var currentY = 0.0;
-
-        foreach (var word in words)
-        {
-            var wordWidth = MeasureText(word, node);
-            var spaceWidth = currentLine.Text.Length > 0 ? MeasureText(" ", node) : 0;
-
-            if (currentWidth + wordWidth + spaceWidth <= effectiveAvailableWidth || currentLine.Text.Length == 0)
-            {
-                // Add word to current line
-                if (currentLine.Text.Length > 0)
+                // Check if text fits on current line
+                if (currentLineWidth + textWidth <= innerWidth && currentLineWidth > 0)
                 {
-                    currentLine.Text += " ";
-                    currentWidth += spaceWidth;
-                }
-                currentLine.Text += word;
-                currentWidth += wordWidth;
-                charIndex += word.Length + (currentLine.Text.Length > word.Length ? 1 : 0);
-            }
-            else
-            {
-                // Finalize current line
-                if (currentLine.Text.Length > 0)
-                {
-                    currentLine.StartCharIndex = charIndex - currentLine.Text.Length;
-                    currentLine.EndCharIndex = charIndex;
-                    currentLine.Width = currentWidth;
-                    currentLine.Height = lineHeight;
-                    currentLine.Baseline = node.FontSize;
-                    currentLine.Y = currentY;
-                    lines.Add(currentLine);
-
-                    currentLine = new LineBox();
-                    currentWidth = 0;
-                    currentY += lineHeight;
-                }
-
-                // Check if word itself is too wide
-                if (wordWidth > effectiveAvailableWidth)
-                {
-                    // Break word
-                    var (prefix, suffix) = BreakWord(word, effectiveAvailableWidth, node);
-                    if (prefix.Length > 0)
-                    {
-                        currentLine.Text = prefix;
-                        currentLine.StartCharIndex = charIndex;
-                        currentLine.EndCharIndex = charIndex + prefix.Length;
-                        currentLine.Width = MeasureText(prefix, node);
-                        currentLine.Height = lineHeight;
-                        currentLine.Baseline = node.FontSize;
-                        currentLine.Y = currentY;
-                        lines.Add(currentLine);
-                        currentLine = new LineBox();
-                        currentWidth = 0;
-                        currentY += lineHeight;
-                        charIndex += prefix.Length;
-                    }
-
-                    if (suffix.Length > 0)
-                    {
-                        currentLine.Text = suffix;
-                        currentLine.StartCharIndex = charIndex;
-                        currentLine.EndCharIndex = charIndex + suffix.Length;
-                        currentWidth = MeasureText(suffix, node);
-                        charIndex += suffix.Length;
-                    }
+                    // Fits on current line
+                    currentLineText.Append(text);
+                    currentLineSpans.Add((text, child));
+                    currentLineWidth += textWidth;
+                    child.X = currentX + (currentLineWidth - textWidth);
+                    child.Y = currentY;
+                    charIndex += text.Length;
                 }
                 else
                 {
-                    // Start new line with word
-                    currentLine.Text = word;
-                    currentLine.StartCharIndex = charIndex;
-                    currentWidth = wordWidth;
-                    charIndex += word.Length;
-                }
-            }
-        }
-
-        // Add remaining text as last line
-        if (currentLine.Text.Length > 0)
-        {
-            currentLine.StartCharIndex = charIndex - currentLine.Text.Length;
-            currentLine.EndCharIndex = charIndex;
-            currentLine.Width = currentWidth;
-            currentLine.Height = lineHeight;
-            currentLine.Baseline = node.FontSize;
-            currentLine.Y = currentY;
-            lines.Add(currentLine);
-        }
-
-        ApplyTextAlignment(lines, node, effectiveAvailableWidth);
-        CalculateCharacterPositions(lines, node);
-
-        return lines;
-    }
-
-    /// <summary>
-    /// Breaks text with explicit newlines into lines, respecting both newlines and word wrapping.
-    /// </summary>
-    private List<LineBox> BreakTextWithNewlines(string text, LayoutNode node, double availableWidth)
-    {
-        var lines = new List<LineBox>();
-        var lineHeight = node.FontSize * 1.2;
-        var currentY = 0.0;
-        var charIndex = 0;
-
-        // Split by newlines but preserve content
-        var lineTexts = text.Split('\n');
-
-        foreach (var lineText in lineTexts)
-        {
-            if (string.IsNullOrEmpty(lineText))
-            {
-                // Empty line - just create an empty line box
-                var emptyLine = new LineBox
-                {
-                    Text = "",
-                    Width = 0,
-                    Height = lineHeight,
-                    Baseline = node.FontSize,
-                    Y = currentY,
-                    StartCharIndex = charIndex,
-                    EndCharIndex = charIndex
-                };
-                lines.Add(emptyLine);
-                currentY += lineHeight;
-                charIndex += 1; // Account for the newline character
-                continue;
-            }
-
-            // For each line, apply word wrapping
-            var words = SplitIntoWords(lineText);
-            var currentLine = new LineBox();
-            var currentWidth = 0.0;
-            var lineStartChar = charIndex;
-
-            foreach (var word in words)
-            {
-                var wordWidth = MeasureText(word, node);
-                var spaceWidth = currentLine.Text.Length > 0 ? MeasureText(" ", node) : 0;
-
-                if (currentWidth + wordWidth + spaceWidth <= availableWidth)
-                {
-                    // Add word to current line
-                    if (currentLine.Text.Length > 0)
+                    // Start new line if current line has content
+                    if (currentLineText.Length > 0)
                     {
-                        currentLine.Text += " ";
-                        currentWidth += spaceWidth;
+                        var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
+                        lines.Add(line);
                     }
-                    currentLine.Text += word;
-                    currentWidth += wordWidth;
-                }
-                else
-                {
-                    // Finalize current line
-                    if (currentLine.Text.Length > 0)
-                    {
-                        currentLine.EndCharIndex = charIndex;
-                        currentLine.Width = currentWidth;
-                        currentLine.Height = lineHeight;
-                        currentLine.Baseline = node.FontSize;
-                        currentLine.Y = currentY;
-                        currentLine.StartCharIndex = lineStartChar;
-                        lines.Add(currentLine);
 
-                        // Start new line
-                        currentLine = new LineBox();
-                        currentWidth = 0;
+                    // Check if text fits on a new line by itself
+                    if (textWidth <= innerWidth)
+                    {
+                        currentLineText.Clear();
+                        currentLineSpans.Clear();
+                        currentLineText.Append(text);
+                        currentLineSpans.Add((text, child));
+                        currentLineWidth = textWidth;
+                        currentX = 0;
                         currentY += lineHeight;
                         lineStartChar = charIndex;
-                    }
-
-                    // Check if word itself is too wide
-                    if (wordWidth > availableWidth)
-                    {
-                        // Break word
-                        var (prefix, suffix) = BreakWord(word, availableWidth, node);
-                        if (prefix.Length > 0)
-                        {
-                            currentLine.Text = prefix;
-                            currentLine.EndCharIndex = charIndex + prefix.Length;
-                            currentLine.Width = MeasureText(prefix, node);
-                            currentLine.Height = lineHeight;
-                            currentLine.Baseline = node.FontSize;
-                            currentLine.Y = currentY;
-                            currentLine.StartCharIndex = lineStartChar;
-                            lines.Add(currentLine);
-                            currentLine = new LineBox();
-                            currentWidth = 0;
-                            currentY += lineHeight;
-                            lineStartChar = charIndex + prefix.Length;
-                            charIndex += prefix.Length;
-                        }
-
-                        if (suffix.Length > 0)
-                        {
-                            currentLine.Text = suffix;
-                            currentLine.EndCharIndex = charIndex + suffix.Length;
-                            currentWidth = MeasureText(suffix, node);
-                            charIndex += suffix.Length;
-                        }
+                        child.X = 0;
+                        child.Y = currentY;
+                        charIndex += text.Length;
                     }
                     else
                     {
-                        // Start new line with word
-                        currentLine.Text = word;
-                        currentWidth = wordWidth;
+                        // Word too wide - break it
+                        var (prefix, suffix) = BreakWord(text, innerWidth, node);
+                        
+                        if (prefix.Length > 0)
+                        {
+                            currentLineText.Append(prefix);
+                            currentLineSpans.Add((prefix, child));
+                            currentLineWidth = MeasureText(prefix, node);
+                            currentY += lineHeight;
+                            lineStartChar = charIndex;
+                            child.X = 0;
+                            child.Y = currentY;
+                            charIndex += prefix.Length;
+                            
+                            // Add remaining suffix to next line
+                            if (suffix.Length > 0)
+                            {
+                                // This would require more complex handling for partial text nodes
+                                // For now, we'll just add the suffix to the next line
+                                currentLineText.Clear();
+                                currentLineSpans.Clear();
+                                currentLineText.Append(suffix);
+                                currentLineSpans.Add((suffix, child));
+                                currentLineWidth = MeasureText(suffix, node);
+                                currentY += lineHeight;
+                                lineStartChar = charIndex;
+                            }
+                        }
+                        else
+                        {
+                            // Even the first character doesn't fit - force it anyway
+                            currentLineText.Append(text);
+                            currentLineSpans.Add((text, child));
+                            currentLineWidth = textWidth;
+                            currentY += lineHeight;
+                            lineStartChar = charIndex;
+                            child.X = 0;
+                            child.Y = currentY;
+                            charIndex += text.Length;
+                        }
                     }
                 }
-                charIndex += word.Length + 1; // +1 for space
             }
-
-            // Add remaining text on this line
-            if (currentLine.Text.Length > 0)
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
             {
-                currentLine.EndCharIndex = charIndex - 1; // -1 to exclude the space after last word
-                currentLine.Width = currentWidth;
-                currentLine.Height = lineHeight;
-                currentLine.Baseline = node.FontSize;
-                currentLine.Y = currentY;
-                currentLine.StartCharIndex = lineStartChar;
-                lines.Add(currentLine);
-                currentY += lineHeight; // Move to next line after adding content
+                // <br/> forces a line break - finalize current line if there's content
+                if (currentLineText.Length > 0)
+                {
+                    var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
+                    lines.Add(line);
+                    currentLineText.Clear();
+                    currentLineSpans.Clear();
+                    currentLineWidth = 0;
+                    lineStartChar = charIndex;
+                }
+                
+                // Always add an empty line for the <br/> to preserve vertical spacing
+                var emptyLine = CreateLineBox(string.Empty, new List<(string text, LayoutNode sourceNode)>(), 0, currentY, charIndex, charIndex, lineHeight, node.FontSize);
+                lines.Add(emptyLine);
+                currentY += lineHeight;
+                
+                child.X = 0;
+                child.Y = currentY;
             }
+            else if (child.LayoutType == LayoutType.Inline)
+            {
+                // Nested inline element - treat as a unit
+                var childWidth = child.Width;
+                
+                if (currentLineWidth + childWidth <= innerWidth && currentLineWidth > 0)
+                {
+                    // Fits on current line
+                    child.X = currentX + currentLineWidth;
+                    child.Y = currentY;
+                    currentLineWidth += childWidth;
+                }
+                else
+                {
+                    // Start new line
+                    if (currentLineText.Length > 0)
+                    {
+                        var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
+                        lines.Add(line);
+                    }
+                    
+                    currentLineText.Clear();
+                    currentLineSpans.Clear();
+                    currentLineWidth = 0;
+                    currentX = 0;
+                    currentY += lineHeight;
+                    lineStartChar = charIndex;
+                    child.X = 0;
+                    child.Y = currentY;
+                }
+            }
+        }
 
-            charIndex += 1; // Account for the newline character
+        // Add final line if there's remaining content
+        if (currentLineText.Length > 0)
+        {
+            var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
+            lines.Add(line);
+            currentY += lineHeight;
         }
 
         // Apply text alignment
-        ApplyTextAlignment(lines, node, availableWidth);
+        ApplyTextAlignment(lines, node, innerWidth);
 
         // Calculate character positions for hit testing
         CalculateCharacterPositions(lines, node);
 
-        return lines;
+        // Set node dimensions
+        node.LineBoxes = lines;
+        node.Height = lines.Count > 0 ? currentY : 0;
+        node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
     }
 
     /// <summary>
-    /// Breaks preformatted text into lines, preserving newlines and whitespace.
+    /// Creates a LineBox with style spans tracking which nodes the text comes from.
     /// </summary>
-    private List<LineBox> BreakPreformattedText(string text, LayoutNode node, double availableWidth)
+    private LineBox CreateLineBox(string text, List<(string text, LayoutNode sourceNode)> spans, double width, double y, int startCharIndex, int endCharIndex, double lineHeight, double fontSize)
     {
-        var lines = new List<LineBox>();
-        var lineHeight = node.FontSize * 1.2;
-        var currentY = 0.0;
-        var charIndex = 0;
-
-        // Split by newlines but preserve the content
-        var lineTexts = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var lineText in lineTexts)
+        var line = new LineBox
         {
-            if (string.IsNullOrEmpty(lineText))
-                continue;
+            Text = text,
+            X = 0,
+            Y = y,
+            Width = width,
+            Height = lineHeight,
+            Baseline = fontSize,
+            StartCharIndex = startCharIndex,
+            EndCharIndex = endCharIndex
+        };
 
-            var line = new LineBox
-            {
-                Text = lineText,
-                Width = MeasureText(lineText, node),
-                Height = lineHeight,
-                Baseline = node.FontSize,
-                Y = currentY,
-                StartCharIndex = charIndex,
-                EndCharIndex = charIndex + lineText.Length
-            };
-
-            lines.Add(line);
-
-            currentY += lineHeight;
-            charIndex += lineText.Length + 1; // +1 for the newline character
-        }
-
-        // Calculate character positions
-        CalculateCharacterPositions(lines, node);
-
-        return lines;
-    }
-
-    /// <summary>
-    /// Splits text into words.
-    /// </summary>
-    private List<string> SplitIntoWords(string text)
-    {
-        var words = new List<string>();
-        var currentWord = new System.Text.StringBuilder();
-
-        foreach (var c in text)
+        // Build style spans
+        var charPos = 0;
+        foreach (var (spanText, sourceNode) in spans)
         {
-            // Treat non-breaking space (U+00A0) as a regular character, not whitespace
-            // This ensures &nbsp; entities are rendered with proper width and height
-            var isWhitespace = char.IsWhiteSpace(c) && c != '\u00A0';
-
-            if (isWhitespace)
+            if (spanText.Length > 0)
             {
-                if (currentWord.Length > 0)
+                line.StyleSpans.Add(new LineBox.InlineStyleSpan
                 {
-                    words.Add(currentWord.ToString());
-                    currentWord.Clear();
-                }
-            }
-            else
-            {
-                currentWord.Append(c);
-            }
-        }
-
-        if (currentWord.Length > 0)
-        {
-            words.Add(currentWord.ToString());
-        }
-
-        return words;
-    }
-
-    /// <summary>
-    /// Breaks a word that is too wide for the available space.
-    /// </summary>
-    private (string WordPrefix, string WordSuffix) BreakWord(string word, double maxWidth, LayoutNode node)
-    {
-        var left = 0;
-        var right = word.Length;
-
-        while (left < right)
-        {
-            var mid = (left + right) / 2;
-            var testPrefix = word.Substring(0, mid);
-            var prefixWidth = MeasureText(testPrefix, node);
-
-            if (prefixWidth <= maxWidth)
-            {
-                left = mid + 1;
-            }
-            else
-            {
-                right = mid;
-            }
-        }
-
-        var wordPrefix = word.Substring(0, left);
-        var wordSuffix = word.Substring(left);
-
-        return (wordPrefix, wordSuffix);
-    }
-
-    /// <summary>
-    /// Applies text alignment to lines.
-    /// </summary>
-    private void ApplyTextAlignment(List<LineBox> lines, LayoutNode node, double availableWidth)
-    {
-        foreach (var line in lines)
-        {
-            var remainingSpace = availableWidth - line.Width;
-
-            switch (node.TextAlign)
-            {
-                case Parsing.TextAlignment.Right:
-                    line.X = remainingSpace;
-                    break;
-
-                case Parsing.TextAlignment.Center:
-                    line.X = remainingSpace / 2;
-                    break;
-
-                case Parsing.TextAlignment.Justify:
-                    if (lines.Count > 1 && lines.IndexOf(line) < lines.Count - 1)
-                    {
-                        // Justify: distribute space between words
-                        var wordCount = line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-                        if (wordCount > 1)
-                        {
-                            var spaceWidth = MeasureText(" ", node);
-                            var extraSpace = remainingSpace / (wordCount - 1);
-                            line.X = 0;
-                            // Note: Full justification would require repositioning each word
-                        }
-                    }
-                    break;
-
-                default: // Left
-                    line.X = 0;
-                    break;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Calculates character positions for hit testing.
-    /// </summary>
-    private void CalculateCharacterPositions(List<LineBox> lines, LayoutNode node)
-    {
-        foreach (var line in lines)
-        {
-            var currentX = line.X;
-            var charIndex = line.StartCharIndex;
-
-            for (var i = 0; i < line.Text.Length; i++)
-            {
-                var c = line.Text[i];
-                var charWidth = MeasureText(c.ToString(), node);
-
-                line.CharacterPositions.Add(new LineBox.CharacterPosition
-                {
-                    CharIndex = charIndex + i,
-                    X = currentX,
-                    Y = line.Y + line.Baseline
+                    StartIndex = charPos,
+                    Length = spanText.Length,
+                    SourceNode = sourceNode
                 });
-
-                currentX += charWidth;
+                charPos += spanText.Length;
             }
-
-            line.EndCharIndex = charIndex + line.Text.Length;
         }
+
+        return line;
     }
 
     /// <summary>
-    /// Measures the width of text.
+    /// Measures the width of text using the specified font.
     /// </summary>
     private double MeasureText(string text, LayoutNode node)
     {
-        if (string.IsNullOrEmpty(text))
-            return 0;
-
-        using var paint = new SKPaint { IsAntialias = true };
-        using var font = new SKFont(CreateSkiaFont(node)) { Size = (float)node.FontSize };
-
+        var typeface = SKTypeface.FromFamilyName(node.FontFamily ?? _defaultFontFamily,
+            node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+            SKFontStyleWidth.Normal,
+            node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+        using var font = new SKFont(typeface) { Size = (float)node.FontSize };
         return font.MeasureText(text);
     }
 
     /// <summary>
-    /// Finds the line index that contains the given character position.
+    /// Breaks a word into two parts that fit within the available width.
     /// </summary>
-    private int FindLineForCharacterPosition(int charPosition, List<LineBox> lines)
+    private (string prefix, string suffix) BreakWord(string word, double availableWidth, LayoutNode node)
     {
-        for (int i = 0; i < lines.Count; i++)
+        // Try to find a break point using hyphenation or character limits
+        // For simplicity, we'll just return the first character as prefix if the word is too wide
+        var firstChar = word.Substring(0, 1);
+        var firstCharWidth = MeasureText(firstChar, node);
+        
+        if (firstCharWidth > availableWidth)
         {
-            var line = lines[i];
-            if (charPosition >= line.StartCharIndex && charPosition < line.EndCharIndex)
+            // Even the first character doesn't fit - return empty prefix and full word as suffix
+            return (string.Empty, word);
+        }
+
+        // Binary search to find the longest prefix that fits
+        int left = 1, right = word.Length;
+        int bestFit = 1;
+
+        while (left <= right)
+        {
+            int mid = (left + right) / 2;
+            var wordPrefix = word.Substring(0, mid);
+            var width = MeasureText(wordPrefix, node);
+
+            if (width <= availableWidth)
             {
-                return i;
+                bestFit = mid;
+                left = mid + 1;
+            }
+            else
+            {
+                right = mid - 1;
             }
         }
-        return -1;
+
+        var prefix = word.Substring(0, bestFit);
+        var suffix = word.Substring(bestFit);
+        return (prefix, suffix);
     }
 
     /// <summary>
-    /// Creates a SkiaSharp font from layout node properties.
+    /// Calculates the X position for a block child based on parent's text alignment.
     /// </summary>
-    private SKTypeface CreateSkiaFont(LayoutNode node)
+    private double CalculateBlockChildXPosition(LayoutNode parent, LayoutNode child, double contentWidth)
     {
-        var style = SKFontStyleWeight.Normal;
-        if (node.FontBold)
-            style = SKFontStyleWeight.Bold;
-
-        var italic = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-
-        return SKTypeface.FromFamilyName(node.FontFamily ?? _defaultFontFamily, style, SKFontStyleWidth.Normal, italic);
-    }
-
-    /// <summary>
-    /// Calculates the X position for a block child element, taking into account text alignment.
-    /// </summary>
-    private double CalculateBlockChildXPosition(LayoutNode parentNode, LayoutNode childNode, double availableWidth)
-    {
-        var paddingLeft = parentNode.PaddingLeft + parentNode.BorderLeftWidth;
-
-        // If child has auto width, it spans the available width, so no centering needed
-        if (!childNode.WidthSet || childNode.Width >= availableWidth)
+        // If parent has text-align: center, center the block child
+        if (parent.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Center && child.Width < contentWidth)
         {
-            return paddingLeft;
+            return (contentWidth - child.Width) / 2;
         }
-
-        // Apply text-align to center/right-align block children
-        if (parentNode.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Center)
-        {
-            return paddingLeft + (availableWidth - childNode.Width) / 2;
-        }
-        else if (parentNode.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Right)
-        {
-            return paddingLeft + availableWidth - childNode.Width;
-        }
-        else
-        {
-            return paddingLeft;
-        }
-    }
-
-    /// <summary>
-    /// Data class for collecting inline content (text and inline elements).
-    /// </summary>
-    private class InlineContent
-    {
-        public string CombinedText { get; set; } = string.Empty;
-        public List<(int startChar, int endChar, LayoutNode node)> Elements { get; set; } = new();
-        // Treat &nbsp; (non-breaking space, U+00A0) as content, not whitespace
-        public bool HasContent => !string.IsNullOrEmpty(CombinedText) &&
-            (CombinedText.Contains('\u00A0') || !string.IsNullOrWhiteSpace(CombinedText));
+        
+        // Block elements typically start at X=0 relative to their containing block
+        // Margins are handled separately
+        return 0;
     }
 
     /// <summary>
@@ -1237,7 +796,118 @@ public sealed class LayoutEngine
         }
 
         content.CombinedText = textBuilder.ToString();
+        content.HasContent = textBuilder.Length > 0;
         return content;
+    }
+
+    /// <summary>
+    /// Breaks text into lines based on available width.
+    /// </summary>
+    private List<LineBox> BreakTextIntoLines(string text, LayoutNode node, double availableWidth)
+    {
+        var lines = new List<LineBox>();
+        var lineHeight = node.FontSize * 1.2;
+        var currentY = 0.0;
+        var currentLineText = new System.Text.StringBuilder();
+        var currentWidth = 0.0;
+        var charIndex = 0;
+        var lineStartChar = 0;
+
+        // Handle newlines explicitly (from <br/> elements)
+        var segments = text.Split('\n');
+        var segmentIndex = 0;
+
+        while (segmentIndex < segments.Length)
+        {
+            var segment = segments[segmentIndex];
+            var words = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var word in words)
+            {
+                var wordWidth = MeasureText(word, node);
+                var spaceWidth = MeasureText(" ", node);
+                var totalWidth = currentWidth + wordWidth + (currentLineText.Length > 0 ? spaceWidth : 0);
+
+                if (totalWidth <= availableWidth && currentLineText.Length > 0)
+                {
+                    // Word fits on current line
+                    currentLineText.Append(" ").Append(word);
+                    currentWidth = MeasureText(currentLineText.ToString(), node);
+                }
+                else
+                {
+                    // Start new line if current line has content
+                    if (currentLineText.Length > 0)
+                    {
+                        var line = new LineBox
+                        {
+                            Text = currentLineText.ToString(),
+                            X = 0,
+                            Y = currentY,
+                            Width = currentWidth,
+                            Height = lineHeight,
+                            Baseline = node.FontSize,
+                            StartCharIndex = lineStartChar,
+                            EndCharIndex = charIndex
+                        };
+                        lines.Add(line);
+
+                        currentY += lineHeight;
+                        lineStartChar = charIndex;
+                    }
+
+                    // Start new line with current word
+                    currentLineText.Clear();
+                    currentLineText.Append(word);
+                    currentWidth = wordWidth;
+                }
+
+                charIndex += word.Length + 1; // +1 for space
+            }
+
+            // Handle end of segment (either end of text or newline)
+            if (currentLineText.Length > 0)
+            {
+                var line = new LineBox
+                {
+                    Text = currentLineText.ToString(),
+                    X = 0,
+                    Y = currentY,
+                    Width = currentWidth,
+                    Height = lineHeight,
+                    Baseline = node.FontSize,
+                    StartCharIndex = lineStartChar,
+                    EndCharIndex = charIndex
+                };
+                lines.Add(line);
+                currentY += lineHeight;
+                lineStartChar = charIndex;
+                currentLineText.Clear();
+                currentWidth = 0;
+            }
+            else if (segmentIndex < segments.Length - 1)
+            {
+                // Empty segment (consecutive <br/>) - add empty line to reserve vertical space
+                var emptyLine = new LineBox
+                {
+                    Text = string.Empty,
+                    X = 0,
+                    Y = currentY,
+                    Width = 0,
+                    Height = lineHeight,
+                    Baseline = node.FontSize,
+                    StartCharIndex = charIndex,
+                    EndCharIndex = charIndex
+                };
+                lines.Add(emptyLine);
+                currentY += lineHeight;
+            }
+
+            charIndex++; // Account for newline character
+            segmentIndex++;
+        }
+
+        return lines;
     }
 
     /// <summary>
@@ -1246,23 +916,14 @@ public sealed class LayoutEngine
     private void LayoutInlineChildrenOnLines(List<LayoutNode> inlineChildren, List<LineBox> lines, InlineContent inlineContent, LayoutNode parentNode)
     {
         if (lines.Count == 0)
-        {
             return;
-        }
 
         var lineHeight = parentNode.FontSize * 1.2;
-        var commonBaseline = parentNode.FontSize * 0.8;
-
-        // Clear any old LineBoxes first
-        foreach (var child in inlineChildren)
-        {
-            child.LineBoxes.Clear();
-        }
 
         // Build a map of character ranges for each child
         var childRanges = new List<(int start, int end, LayoutNode child)>();
-
         int charIndex = 0;
+
         foreach (var child in inlineChildren)
         {
             if (child.HtmlNode?.Type == HtmlElementType.Text)
@@ -1273,7 +934,6 @@ public sealed class LayoutEngine
             }
             else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
             {
-                // LineBreak elements consume a newline character in the combined text
                 charIndex += 1;
             }
             else if (child.LayoutType == LayoutType.Inline)
@@ -1290,77 +950,270 @@ public sealed class LayoutEngine
             var line = lines[lineIndex];
             var lineStartY = lineIndex * lineHeight;
 
-            // Use the line's own character indices if available
             var lineStartChar = line.StartCharIndex >= 0 ? line.StartCharIndex : 0;
             var lineEndChar = line.EndCharIndex >= 0 ? line.EndCharIndex : (lineStartChar + (line.Text?.Length ?? 0));
 
             double currentX = 0;
 
-            // Find and position all children that contribute to this line
             foreach (var (rangeStart, rangeEnd, child) in childRanges)
             {
-                // Check if this child's text overlaps with the current line
                 if (rangeEnd <= lineStartChar || rangeStart >= lineEndChar)
-                {
-                    // Child is not on this line, skip it
                     continue;
-                }
 
-                // This child contributes to this line
                 if (child.HtmlNode?.Type == HtmlElementType.Text)
                 {
                     var text = child.HtmlNode.TextContent ?? string.Empty;
                     var textWidth = MeasureText(text, parentNode);
 
-                    // Position this text node on the current line
                     child.X = currentX;
                     child.Y = lineStartY;
                     child.Width = textWidth;
                     child.Height = lineHeight;
 
-                    // Create or append LineBox for this text on this line
-                    // Y is the offset relative to child.Y (which is lineStartY)
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
-                        Y = 0,  // LineBox Y is relative to child.Y
+                        Y = 0,
                         Width = textWidth,
                         Height = lineHeight,
-                        Baseline = commonBaseline
+                        Baseline = parentNode.FontSize
                     };
+
+                    // Add style span pointing to parent node for text
+                    lineBox.StyleSpans.Add(new LineBox.InlineStyleSpan
+                    {
+                        StartIndex = 0,
+                        Length = text.Length,
+                        SourceNode = parentNode
+                    });
+
                     child.LineBoxes.Add(lineBox);
 
                     currentX += textWidth;
                 }
                 else if (child.LayoutType == LayoutType.Inline)
                 {
-                    // For inline elements, just measure the text width without recursing LayoutInlineNode
                     var text = CollectTextFromNode(child);
                     var textWidth = MeasureText(text, child);
 
-                    // Position this inline element on the current line
                     child.X = currentX;
                     child.Y = lineStartY;
                     child.Width = textWidth;
                     child.Height = lineHeight;
 
-                    // Create or append LineBox for this inline element on this line
-                    // Y is the offset relative to child.Y (which is lineStartY)
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
-                        Y = 0,  // LineBox Y is relative to child.Y
+                        Y = 0,
                         Width = textWidth,
                         Height = lineHeight,
-                        Baseline = commonBaseline
+                        Baseline = parentNode.FontSize
                     };
+
+                    // Add style span pointing to the child (link) node
+                    lineBox.StyleSpans.Add(new LineBox.InlineStyleSpan
+                    {
+                        StartIndex = 0,
+                        Length = text.Length,
+                        SourceNode = child
+                    });
+
                     child.LineBoxes.Add(lineBox);
 
                     currentX += textWidth;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Builds style spans for parent lines to indicate which parts belong to which inline children.
+    /// This allows proper rendering of styled inline elements like links.
+    /// </summary>
+    private void BuildParentLineStyleSpans(List<LineBox> parentLines, InlineContent inlineContent, List<LayoutNode> inlineChildren)
+    {
+        // Build the combined text and track character ranges for all children
+        var combinedTextBuilder = new System.Text.StringBuilder();
+        var allRanges = new List<(int start, int end, LayoutNode child, bool isInlineElement, string text)>();
+        int charIndex = 0;
+
+        foreach (var child in inlineChildren)
+        {
+            if (child.HtmlNode?.Type == HtmlElementType.Text)
+            {
+                var text = child.HtmlNode.TextContent ?? string.Empty;
+                combinedTextBuilder.Append(text);
+                allRanges.Add((charIndex, charIndex + text.Length, child, false, text));
+                charIndex += text.Length;
+            }
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+            {
+                combinedTextBuilder.Append('\n');
+                charIndex += 1;
+            }
+            else if (child.LayoutType == LayoutType.Inline)
+            {
+                // Inline element (like <a>, <strong>, etc.)
+                var text = CollectTextFromNode(child);
+                combinedTextBuilder.Append(text);
+                allRanges.Add((charIndex, charIndex + text.Length, child, true, text));
+                charIndex += text.Length;
+            }
+        }
+
+        var combinedText = combinedTextBuilder.ToString();
+
+        // For each parent line, build style spans by finding where the child text appears in the line
+        foreach (var line in parentLines)
+        {
+            line.StyleSpans.Clear();
+
+            if (line.Text == null || line.Text.Length == 0)
+                continue;
+
+            // Find the position of this line's text within the combined text
+            // The line text should be a substring of the combined text (with spaces handled)
+            int linePosInCombined = combinedText.IndexOf(line.Text);
+            
+            if (linePosInCombined == -1)
+            {
+                // Fallback: try to find the line text ignoring exact spacing
+                // This handles cases where word wrapping might have altered spacing
+                linePosInCombined = FindLinePositionInCombinedText(line.Text, combinedText, allRanges);
+            }
+
+            // For each inline element (link, strong, etc.), find where it appears in this line
+            foreach (var (rangeStart, rangeEnd, child, isInlineElement, rangeText) in allRanges)
+            {
+                if (!isInlineElement || string.IsNullOrEmpty(rangeText))
+                    continue;
+
+                // Find where this child's text appears in the line text
+                int spanStartInLine = line.Text.IndexOf(rangeText, StringComparison.Ordinal);
+                
+                if (spanStartInLine >= 0)
+                {
+                    // Found the text - add a style span for it
+                    line.StyleSpans.Add(new LineBox.InlineStyleSpan
+                    {
+                        StartIndex = spanStartInLine,
+                        Length = rangeText.Length,
+                        SourceNode = child
+                    });
+                }
+                else
+                {
+                    // Text not found exactly - might be split across lines or partial match
+                    // Try to find partial overlap
+                    int partialStart = FindPartialMatch(line.Text, rangeText, rangeStart, linePosInCombined);
+                    if (partialStart >= 0)
+                    {
+                        int partialLength = Math.Min(rangeText.Length, line.Text.Length - partialStart);
+                        line.StyleSpans.Add(new LineBox.InlineStyleSpan
+                        {
+                            StartIndex = partialStart,
+                            Length = partialLength,
+                            SourceNode = child
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds the position of a line within the combined text.
+    /// </summary>
+    private int FindLinePositionInCombinedText(string lineText, string combinedText, List<(int start, int end, LayoutNode child, bool isInlineElement, string text)> ranges)
+    {
+        // Try to find the line by matching the first word
+        var firstWord = lineText.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (string.IsNullOrEmpty(firstWord))
+            return -1;
+
+        int pos = combinedText.IndexOf(firstWord);
+        if (pos >= 0 && combinedText.Substring(pos, lineText.Length) == lineText)
+            return pos;
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Finds a partial match of rangeText in lineText based on character positions.
+    /// </summary>
+    private int FindPartialMatch(string lineText, string rangeText, int rangeStart, int linePosInCombined)
+    {
+        if (linePosInCombined < 0)
+            return -1;
+
+        // Calculate where the range text should appear in the line
+        int expectedPos = rangeStart - linePosInCombined;
+        
+        if (expectedPos >= 0 && expectedPos < lineText.Length)
+        {
+            // Verify that the text at expectedPos matches the start of rangeText
+            int matchLength = 0;
+            while (matchLength < rangeText.Length && expectedPos + matchLength < lineText.Length)
+            {
+                if (lineText[expectedPos + matchLength] == rangeText[matchLength])
+                    matchLength++;
+                else
+                    break;
+            }
+            
+            if (matchLength > 0)
+                return expectedPos;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Helper class to hold inline content data.
+    /// </summary>
+    private class InlineContent
+    {
+        public string CombinedText { get; set; } = string.Empty;
+        public bool HasContent { get; set; }
+        public List<(int start, int end, LayoutNode child)> Elements { get; } = new();
+    }
+
+    /// <summary>
+    /// Applies text alignment to line boxes.
+    /// </summary>
+    private void ApplyTextAlignment(List<LineBox> lines, LayoutNode node, double innerWidth)
+    {
+        foreach (var line in lines)
+        {
+            switch (node.TextAlign)
+            {
+                case Parsing.TextAlignment.Center:
+                    line.X = (innerWidth - line.Width) / 2;
+                    break;
+                case Parsing.TextAlignment.Right:
+                    line.X = innerWidth - line.Width;
+                    break;
+                case Parsing.TextAlignment.Justify:
+                    // Justification would require more complex logic to adjust word spacing
+                    // For now, we'll just left-align
+                    line.X = 0;
+                    break;
+                default:
+                    line.X = 0;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Calculates character positions for hit testing.
+    /// </summary>
+    private void CalculateCharacterPositions(List<LineBox> lines, LayoutNode node)
+    {
+        // This method would calculate the position of each character in the line boxes
+        // for hit testing purposes. For now, we use the StartCharIndex and EndCharIndex
+        // that are already set on the LineBoxes.
     }
 }

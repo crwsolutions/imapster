@@ -1,6 +1,5 @@
 using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
-using Microsoft.UI.Xaml.Controls;
 using SkiaSharp;
 using System.Diagnostics;
 using SKPaintSurfaceEventArgs = SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs;
@@ -190,7 +189,7 @@ public partial class HtmlViewer : ContentView
         // Conditionally set HeightRequest based on available height constraint
         // This allows the control to use available space when content fits, or scroll when it doesn't
         double newHeightRequest = -1;
-        
+
         if (heightConstraint == double.PositiveInfinity)
         {
             // ScrollView scenario - set HeightRequest so ScrollView knows content height for scrolling
@@ -210,16 +209,16 @@ public partial class HtmlViewer : ContentView
             newHeightRequest = -1;
             Debug.WriteLine($"Setting HeightRequest to -1 (content fits, using available space)");
         }
-        
+
         // Track if HeightRequest needs to be updated
         bool needsHeightRequestUpdate = HeightRequest != newHeightRequest;
-        
+
         // Only update HeightRequest if it actually changed
         if (needsHeightRequestUpdate)
         {
             HeightRequest = newHeightRequest;
         }
-        
+
         // Defer the measure invalidation until after the current layout pass
         // This prevents infinite loops and ensures the layout system picks up the change
         if (needsHeightRequestUpdate)
@@ -242,13 +241,13 @@ public partial class HtmlViewer : ContentView
 
         // Parse the HTML content
         _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
-        
+
         // Perform layout with current width if available
         if (_lastRenderedWidth > 0)
         {
             _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)_lastRenderedWidth);
         }
-        
+
         InvalidateRender();
     }
 
@@ -339,6 +338,7 @@ public partial class HtmlViewer : ContentView
 
     private void RenderNode(SKCanvas canvas, LayoutNode node, double offsetX, double offsetY)
     {
+        // Render background and borders
         if (node.BackgroundColor is not null)
         {
             var bgX = (float)(offsetX + node.BorderLeftWidth);
@@ -352,84 +352,129 @@ public partial class HtmlViewer : ContentView
 
         DrawBorders(canvas, offsetX, offsetY, node);
 
+        // Render list marker if applicable
         if (node.HtmlNode?.Type == HtmlElementType.ListItem)
             RenderListMarker(canvas, node, offsetX, offsetY);
 
-        var hasInlineChildren = node.Children.Any(c => c.LayoutType == LayoutType.Inline);
+        // Calculate content offsets
         var contentOffsetX = offsetX + node.PaddingLeft + node.BorderLeftWidth;
         var contentOffsetY = offsetY + node.PaddingTop + node.BorderTopWidth;
         var isListItem = node.HtmlNode?.Type == HtmlElementType.ListItem;
         var markerWidthOffset = isListItem ? node.FontSize * 1.5 : 0;
 
-        if (hasInlineChildren)
+        // Render block children first (they are positioned absolutely)
+        foreach (var child in node.Children)
         {
-            foreach (var child in node.Children)
+            if (child.LayoutType == LayoutType.Block)
             {
-                if (child.LayoutType == LayoutType.Block)
-                    RenderNode(canvas, child, offsetX + child.X, offsetY + child.Y);
-                else if (child.LayoutType == LayoutType.Inline)
-                    RenderInlineNode(canvas, child, contentOffsetX + markerWidthOffset + child.X, contentOffsetY + child.Y);
-                else if (child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
-                    RenderTextNode(canvas, child, contentOffsetX + markerWidthOffset + child.X, contentOffsetY + child.Y, node);
+                RenderNode(canvas, child, offsetX + child.X, offsetY + child.Y);
+            }
+        }
+
+        // Render inline content: recurse through inline children until we reach text nodes or LineBoxes
+        RenderInlineContent(canvas, node, contentOffsetX + markerWidthOffset, contentOffsetY);
+    }
+
+    /// <summary>
+    /// Finds a child LineBox that matches the parent LineBox based on text content and X position.
+    /// Returns (child, lineBox) if found, null otherwise.
+    /// </summary>
+    private (LayoutNode, LineBox)? FindChildLineBox(LayoutNode node, LineBox parentLineBox)
+    {
+        // First try: exact match by text and X position
+        foreach (var child in node.Children)
+        {
+            if (child.LayoutType == LayoutType.Inline && child.LineBoxes.Count > 0)
+            {
+                foreach (var lineBox in child.LineBoxes)
+                {
+                    if (lineBox.Text == parentLineBox.Text &&
+                        Math.Abs((child.X + lineBox.X) - parentLineBox.X) < 0.01)
+                    {
+                        return (child, lineBox);
+                    }
+                }
+            }
+        }
+
+        // Second try: match by text only (in case X position is slightly off due to layout)
+        foreach (var child in node.Children)
+        {
+            if (child.LayoutType == LayoutType.Inline && child.LineBoxes.Count > 0)
+            {
+                foreach (var lineBox in child.LineBoxes)
+                {
+                    if (lineBox.Text == parentLineBox.Text && !string.IsNullOrEmpty(lineBox.Text))
+                    {
+                        return (child, lineBox);
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Renders inline content. Renders LineBoxes if the node has them, otherwise recurses into children.
+    /// When rendering parent LineBoxes, we use them for positioning but render children for styling.
+    /// </summary>
+    private void RenderInlineContent(SKCanvas canvas, LayoutNode node, double offsetX, double offsetY)
+    {
+        // If this node has LineBoxes (it's a leaf or contains inline text that was laid out), render them
+        if (node.LineBoxes.Count > 0)
+        {
+            // Check if any children have their own LineBoxes (inline elements like <strong>, <a>, etc.)
+            var hasInlineChildrenWithLineBoxes = node.Children.Any(c =>
+                c.LayoutType == LayoutType.Inline && c.LineBoxes.Count > 0);
+
+            if (hasInlineChildrenWithLineBoxes)
+            {
+                // Parent has LineBoxes (including empty ones from <br/>), but children also have LineBoxes for styling
+                // For each parent LineBox, check if a child covers it. If yes, render child (styled). If no, render parent (plain/empty).
+                foreach (var parentLineBox in node.LineBoxes)
+                {
+                    // Find child LineBox matching this parent LineBox by text and X position
+                    var childLineBox = FindChildLineBox(node, parentLineBox);
+
+                    if (childLineBox != null)
+                    {
+                        // Render child LineBox (styled text) using parent's Y position
+                        var (child, cb) = childLineBox.Value;
+                        RenderLine(canvas, cb, offsetX + parentLineBox.X, offsetY + parentLineBox.Y, child);
+                    }
+                    else
+                    {
+                        // No matching child - render parent (plain text or empty line from <br/>)
+                        RenderLine(canvas, parentLineBox, offsetX + parentLineBox.X, offsetY + parentLineBox.Y, node);
+                    }
+                }
+            }
+            else
+            {
+                // No inline children with their own LineBoxes - render all parent LineBoxes
+                foreach (var lineBox in node.LineBoxes)
+                {
+                    RenderLine(canvas, lineBox, offsetX + lineBox.X, offsetY + lineBox.Y, node);
+                }
             }
         }
         else
         {
-            var hasNodeLineBoxes = node.LineBoxes.Count > 0;
-
-            // If node has LineBoxes from inline content, render them directly
-            if (hasNodeLineBoxes)
-            {
-                foreach (var line in node.LineBoxes)
-                    RenderLine(canvas, line, contentOffsetX + markerWidthOffset + line.X, contentOffsetY + line.Y, node);
-            }
-
+            // Otherwise recurse into children (container node)
             foreach (var child in node.Children)
             {
-                if (child.LayoutType == LayoutType.Block)
-                    RenderNode(canvas, child, offsetX + child.X, offsetY + child.Y);
-                else if (hasNodeLineBoxes && child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
+                if (child.LayoutType == LayoutType.Inline)
                 {
-                    // Skip rendering individual text children when parent has LineBoxes
-                    // The LineBoxes already contain all the inline content
-                    continue;
+                    // Recurse into inline child with its offset
+                    RenderInlineContent(canvas, child, offsetX + child.X, offsetY + child.Y);
                 }
                 else if (child.LayoutType == LayoutType.None && child.HtmlNode?.Type == HtmlElementType.Text)
                 {
-                    // Render text child's own LineBoxes if it has them
-                    // Otherwise, rely on parent's LineBoxes
-                    if (child.LineBoxes.Count > 0)
-                    {
-                        // Child has its own LineBoxes - render them at the child's Y position
-                        var xBase = contentOffsetX + markerWidthOffset + child.X;
-                        var yBase = contentOffsetY + child.Y;
-                        foreach (var lineBox in child.LineBoxes)
-                            RenderLine(canvas, lineBox, xBase + lineBox.X, yBase + lineBox.Y, node);
-                    }
-                    else if (!hasNodeLineBoxes)
-                    {
-                        // Child has no LineBoxes and parent doesn't either - render as before
-                        RenderTextNode(canvas, child, contentOffsetX + markerWidthOffset + child.X, contentOffsetY + child.Y, node);
-                    }
+                    // Text node - it should have LineBoxes from the parent's layout, but if not, skip
+                    // (Text nodes don't have their own LineBoxes; they're part of the parent's inline flow)
                 }
             }
-        }
-
-        // Check if any text children have their own LineBoxes
-        var hasChildLineBoxes = node.Children.OfType<LayoutNode>()
-            .Where(c => c.HtmlNode?.Type == HtmlElementType.Text && c.LineBoxes.Count > 0)
-            .Any();
-
-        if (!hasInlineChildren && node.LineBoxes.Count > 0 && !hasChildLineBoxes)
-        {
-            // Only render parent's LineBoxes if children aren't rendering their own
-            // For list items, the LineBoxes are at Y=0, so we need to add the contentOffsetY
-            // For other nodes, the LineBoxes already have the correct Y position
-            var yBase = isListItem ? contentOffsetY : offsetY;
-            // For list items, also add markerWidthOffset to X position so text appears after the marker
-            var xBase = contentOffsetX + (isListItem ? markerWidthOffset : 0);
-            foreach (var line in node.LineBoxes)
-                RenderLine(canvas, line, xBase + line.X, yBase + line.Y, node);
         }
     }
 
@@ -473,33 +518,136 @@ public partial class HtmlViewer : ContentView
             var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
             using var font = new SKFont(typeface) { Size = (float)node.FontSize };
 
-            var paint = new SKPaint
+            // Render text with per-span styling using StyleSpans
+            if (line.StyleSpans.Count > 0)
             {
-                IsAntialias = true,
-                Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
-            };
-
-            if (node.Href is not null && _renderContext.IsLinksEnabled)
-                paint.Color = _renderContext.LinkColor.ParseColorString();
-
-            canvas.DrawText(line.Text, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
-
-            if (node.TextDecoration != TextDecoration.None)
-            {
-                var decorationY = node.TextDecoration switch
+                if (line.Text.Contains("fbto"))
                 {
-                    TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
-                    TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
-                    _ => (float)(y + line.Baseline + node.FontSize * 0.1)
+                    System.Diagnostics.Debug.WriteLine($"RenderLine FBTO: text='{line.Text}' spans={line.StyleSpans.Count}");
+                    foreach (var span in line.StyleSpans.OrderBy(s => s.StartIndex))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  span: start={span.StartIndex} len={span.Length} text='{line.Text.Substring(span.StartIndex, span.Length)}' href={span.SourceNode?.Href}");
+                    }
+                }
+
+                // Sort spans by StartIndex to ensure correct rendering order
+                var sortedSpans = line.StyleSpans.OrderBy(s => s.StartIndex).ToList();
+
+                var currentX = x;
+                var textIndex = 0;
+
+                foreach (var span in sortedSpans)
+                {
+                    // Validate span bounds
+                    if (span.StartIndex < 0 || span.StartIndex > line.Text.Length)
+                        continue;
+                    if (span.StartIndex + span.Length > line.Text.Length)
+                        continue;
+
+                    // Render gap before this span with unstyled text
+                    if (textIndex < span.StartIndex)
+                    {
+                        var gapLength = span.StartIndex - textIndex;
+                        var gapText = line.Text.Substring(textIndex, gapLength);
+                        var gapPaint = new SKPaint
+                        {
+                            IsAntialias = true,
+                            Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
+                        };
+                        canvas.DrawText(gapText, (float)currentX, (float)(y + line.Baseline), SKTextAlign.Left, font, gapPaint);
+                        currentX += font.MeasureText(gapText);
+                        textIndex = span.StartIndex;
+                    }
+
+                    // Render the styled span
+                    var spanText = line.Text.Substring(span.StartIndex, span.Length);
+                    var sourceNode = span.SourceNode ?? node;
+
+                    var paint = new SKPaint
+                    {
+                        IsAntialias = true,
+                        Color = sourceNode.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
+                    };
+
+                    // Apply link color if source node has href
+                    if (sourceNode.Href is not null && _renderContext.IsLinksEnabled)
+                    {
+                        paint.Color = _renderContext.LinkColor.ParseColorString();
+                    }
+
+                    canvas.DrawText(spanText, (float)currentX, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
+
+                    // Draw decorations
+                    var spanWidth = font.MeasureText(spanText);
+
+                    if (sourceNode.TextDecoration != TextDecoration.None)
+                    {
+                        var decorationY = sourceNode.TextDecoration switch
+                        {
+                            TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
+                            TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
+                            _ => (float)(y + line.Baseline + node.FontSize * 0.1)
+                        };
+
+                        canvas.DrawLine((float)currentX, decorationY, (float)(currentX + spanWidth), decorationY, paint.Color);
+                    }
+
+                    // Add underline for links if no text decoration
+                    if (sourceNode.Href is not null && _renderContext.IsLinksEnabled && sourceNode.TextDecoration == TextDecoration.None)
+                    {
+                        var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
+                        canvas.DrawLine((float)currentX, underlineY, (float)(currentX + spanWidth), underlineY, _renderContext.LinkColor.ParseColorString());
+                    }
+
+                    currentX += spanWidth;
+                    textIndex = span.StartIndex + span.Length;
+                }
+
+                // Render remaining text after last span
+                if (textIndex < line.Text.Length)
+                {
+                    var remainingText = line.Text.Substring(textIndex);
+                    var remainingPaint = new SKPaint
+                    {
+                        IsAntialias = true,
+                        Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
+                    };
+                    canvas.DrawText(remainingText, (float)currentX, (float)(y + line.Baseline), SKTextAlign.Left, font, remainingPaint);
+                }
+            }
+            else
+            {
+                // No style spans - render entire line with node styling
+                var isLinkNode = node.Href is not null;
+
+                var paint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
                 };
 
-                canvas.DrawLine((float)x, decorationY, (float)(x + line.Width), decorationY, paint.Color);
-            }
+                if (isLinkNode && _renderContext.IsLinksEnabled)
+                    paint.Color = _renderContext.LinkColor.ParseColorString();
 
-            if (node.Href is not null && _renderContext.IsLinksEnabled && node.TextDecoration == TextDecoration.None)
-            {
-                var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
-                canvas.DrawLine((float)x, underlineY, (float)(x + line.Width), underlineY, _renderContext.LinkColor.ParseColorString());
+                canvas.DrawText(line.Text, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
+
+                if (node.TextDecoration != TextDecoration.None)
+                {
+                    var decorationY = node.TextDecoration switch
+                    {
+                        TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
+                        TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
+                        _ => (float)(y + line.Baseline + node.FontSize * 0.1)
+                    };
+
+                    canvas.DrawLine((float)x, decorationY, (float)(x + line.Width), decorationY, paint.Color);
+                }
+
+                if (isLinkNode && _renderContext.IsLinksEnabled && node.TextDecoration == TextDecoration.None)
+                {
+                    var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
+                    canvas.DrawLine((float)x, underlineY, (float)(x + line.Width), underlineY, _renderContext.LinkColor.ParseColorString());
+                }
             }
 
             if (_renderContext.IsSelectionEnabled && _renderContext.SelectionRange.HasValue)
@@ -514,14 +662,20 @@ public partial class HtmlViewer : ContentView
                     var selectEnd = Math.Min(end, lineEnd);
                     var selectLength = selectEnd - selectStart;
 
-                    if (selectLength > 0)
+                    if (selectLength > 0 && selectStart - lineStart < line.Text.Length)
                     {
-                        var selectionText = line.Text.Substring(selectStart - lineStart, selectLength);
+                        var selectionText = line.Text.Substring(selectStart - lineStart, Math.Min(selectLength, line.Text.Length - (selectStart - lineStart)));
                         var selectionWidth = font.MeasureText(selectionText);
                         var selectionY = y - (float)(node.FontSize * 0.25f);
 
+                        var selectionPaint = new SKPaint
+                        {
+                            IsAntialias = true,
+                            Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
+                        };
+
                         canvas.DrawRect((float)x, (float)selectionY, (float)selectionWidth, (float)(node.FontSize * 1.25f), _renderContext.SelectionColor.ParseColorString());
-                        canvas.DrawText(selectionText, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
+                        canvas.DrawText(selectionText, (float)x, (float)(y + line.Baseline), SKTextAlign.Left, font, selectionPaint);
                     }
                 }
             }
