@@ -47,7 +47,7 @@ public partial class EmailDetailsView : ContentView
         }
     }
 
-    private void ToggleSwitchView_Toggled(object sender, bool isShowingRaw)
+    private void ToggleSwitchView_Toggled(object? sender, bool isShowingRaw)
     {
             HtmlContentGrid.IsVisible = !isShowingRaw;
             RawContentGrid.IsVisible = isShowingRaw;
