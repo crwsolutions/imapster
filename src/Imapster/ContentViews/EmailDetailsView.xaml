@@ -48,16 +48,14 @@
             </VerticalStackLayout>
 
             <!-- Body -->
-            <Border StrokeShape="RoundRectangle 6" Padding="12" StrokeThickness="0" Grid.Row="1" Background="#DDFFFFFF">
+            <Border StrokeShape="RoundRectangle 6"  StrokeThickness="0" Grid.Row="1" Padding="6" Background="White">
                 <Grid>
-                    <Grid x:Name="HtmlContentGrid" IsVisible="True" Grid.Row="2">
-                        <ScrollView VerticalScrollBarVisibility="Always">
+                    <ScrollView VerticalScrollBarVisibility="Always" x:Name="HtmlContentGrid" VerticalOptions="Start">
+                        <Grid>
                             <viewer:HtmlViewer Html="{Binding Source={x:Reference ThisView}, Path=Email.BodyHtml}" />
-                        </ScrollView>
-                    </Grid>
-                    <Grid x:Name="RawContentGrid" IsVisible="False" Grid.Row="2">
-                        <Editor IsReadOnly="True" Text="{Binding Source={x:Reference ThisView}, Path=Email.Body}" TextColor="{StaticResource Gray950}" />
-                    </Grid>
+                        </Grid>
+                    </ScrollView>
+                    <Editor  x:Name="RawContentGrid" IsVisible="False" IsReadOnly="True" Text="{Binding Source={x:Reference ThisView}, Path=Email.Body}" TextColor="{StaticResource Gray950}" />
                 </Grid>
             </Border>
 
