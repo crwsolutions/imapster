@@ -1,15 +1,12 @@
 using Imapster.HtmlViewer.Layout;
 using Imapster.HtmlViewer.Parsing;
 using SkiaSharp;
+using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Diagnostics;
-using SKPaintSurfaceEventArgs = SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs;
 
 namespace Imapster.HtmlViewer.Rendering;
 
-/// <summary>
-/// SkiaSharp-based renderer for HTML content.
-/// </summary>
 public partial class HtmlViewer : SKCanvasView
 {
     private readonly LayoutEngine _layoutEngine;
@@ -142,7 +139,7 @@ public partial class HtmlViewer : SKCanvasView
     /// </summary>
     public HtmlViewer()
     {
-        InitializeComponent();
+        //InitializeComponent();
 
         MinimumHeightRequest = 10;
         MinimumWidthRequest = 10;
@@ -156,6 +153,11 @@ public partial class HtmlViewer : SKCanvasView
         LinkColor = Colors.Blue;
         FontSize = 16;
         FontFamily = "Arial";
+
+        PaintSurface += OnPaintSurface;
+        IgnorePixelScaling = true;
+        VerticalOptions = LayoutOptions.Start;
+        HorizontalOptions = LayoutOptions.Start;
     }
 
     /// <summary>
