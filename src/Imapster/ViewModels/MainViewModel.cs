@@ -369,7 +369,7 @@ public partial class MainViewModel : BaseViewModel
         {
             await Parallel.ForEachAsync(selectedEmails, new ParallelOptions
             {
-                MaxDegreeOfParallelism = 4,
+                MaxDegreeOfParallelism = 3,
                 CancellationToken = _aiCancellationTokenSource.Token
             }, async (email, token) =>
             {
