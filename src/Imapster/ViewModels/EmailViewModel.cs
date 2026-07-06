@@ -148,6 +148,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
 
     public object? GetValue(string key) => key switch
     {
+        nameof(FromDisplay) => FromDisplay,
         nameof(From) => From,
         nameof(To) => To,
         nameof(AiDelete) => AiDelete,
