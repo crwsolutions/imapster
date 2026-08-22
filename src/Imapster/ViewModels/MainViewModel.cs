@@ -297,6 +297,12 @@ public partial class MainViewModel : BaseViewModel
             // Sync folders from server to local storage
             await SyncFoldersAsync();
 
+            // The selected folder may have been removed from the server; if so, drop it and let the default folder be picked
+            if (SelectedFolder != null && !await FolderStillExistsAsync(SelectedFolder.Id))
+            {
+                SelectedFolder = null;
+            }
+
             // Sync emails from server to local storage (for selected folder)
             if (SelectedFolder != null)
             {
@@ -440,6 +446,12 @@ public partial class MainViewModel : BaseViewModel
         {
             // Refresh folders from server to local storage
             await SyncFoldersAsync();
+
+            // The selected folder may have been removed from the server; if so, drop it and let the default folder be picked
+            if (SelectedFolder != null && !await FolderStillExistsAsync(SelectedFolder.Id))
+            {
+                SelectedFolder = null;
+            }
 
             // Refresh emails for the selected folder from server to local storage
             if (SelectedFolder != null)
@@ -672,5 +684,11 @@ public partial class MainViewModel : BaseViewModel
     private async Task SyncEmailsAsync(string id)
     {
         await _imapSyncService.EmailsAsync(id);
+    }
+
+    private async Task<bool> FolderStillExistsAsync(string folderId)
+    {
+        var folders = await _folderRepository.GetAllFoldersAsync(SelectedAccount!.Id);
+        return folders.Any(f => f.Id == folderId);
     }
 }

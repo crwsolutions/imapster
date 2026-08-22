@@ -64,6 +64,10 @@ public class ImapSyncService : IImapSyncService
 
             // Get the folder
             var folder = await _imapClient.GetFolderAsync(folderId, cancellationToken);
+            if (folder == null)
+            {
+                throw new ApplicationException($"Folder {folderId} not found");
+            }
             await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
 
             // 1. Get current UIDs from server (UniqueId list)
@@ -157,6 +161,24 @@ public class ImapSyncService : IImapSyncService
                     AccountId = _currentAccount.Id,
                     IsTrash = folder.Attributes.HasFlag(FolderAttributes.Trash)
                 });
+            }
+
+            // Remove local folders that no longer exist on the server (including their local emails)
+            var remoteFolderIds = folders.Select(f => f.FullName).ToHashSet(StringComparer.Ordinal);
+            if (remoteFolderIds.Count == 0)
+            {
+                // An empty folder list is more likely a transient server glitch than an account with zero folders.
+                _logger.LogWarning("Server returned an empty folder list. Skipping removal of stale local folders.");
+            }
+            else
+            {
+                var localFolders = await _folderRepository.GetAllFoldersAsync(_currentAccount.Id);
+                foreach (var localFolder in localFolders.Where(f => !remoteFolderIds.Contains(f.Id)))
+                {
+                    _logger.LogInformation("Removing stale local folder {FolderId} (no longer on server)", localFolder.Id);
+                    await _emailRepository.BulkDeleteEmailsAsync(_currentAccount.Id, localFolder.Id);
+                    await _folderRepository.DeleteFolderAsync(_currentAccount.Id, localFolder.Id);
+                }
             }
 
             _logger.LogInformation("Successfully refreshed folders");
