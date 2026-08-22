@@ -1,5 +1,6 @@
 using Imapster.HtmlViewer.Parsing;
 using SkiaSharp;
+using System.Text;
 
 namespace Imapster.HtmlViewer.Layout;
 
@@ -20,6 +21,40 @@ public sealed class LayoutEngine
     private const double DefaultListMargin = 1.0;
     private const double DefaultListItemPadding = 0.5;
     private const double DefaultMarkerWidth = 2.5; // Width for list markers in em (bullet + space)
+    private const double DefaultTableCellPadding = 4; // Default padding for td/th cells (px)
+
+    /// <summary>
+    /// Gets the font line metrics (ascent, descent, baseline, line height) for a node's font.
+    /// Line height is ascent + descent + 2 and baseline is ascent + 1, so text sits near the
+    /// vertical center of the line. Falls back to fontSize * 1.2 / fontSize * 0.8 when the
+    /// typeface metrics are unusable (e.g. ascent <= 0).
+    /// </summary>
+    private static (double Ascent, double Descent, double Baseline, double LineHeight) GetLineMetrics(double fontSize, string? fontFamily, bool fontBold, bool fontItalic)
+    {
+        if (fontSize <= 0)
+            return (0, 0, 0, 0);
+
+        var typeface = SKTypeface.FromFamilyName(
+            fontFamily,
+            fontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+            SKFontStyleWidth.Normal,
+            fontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+        using var font = new SKFont(typeface) { Size = (float)fontSize };
+
+        var metrics = font.Metrics;
+        double ascent = metrics.Ascent < 0 ? -metrics.Ascent : 0;
+        double descent = metrics.Descent > 0 ? metrics.Descent : 0;
+
+        if (ascent <= 0)
+        {
+            ascent = fontSize * 0.8;
+            descent = fontSize * 0.2;
+        }
+
+        var lineHeight = ascent + descent + 2;
+        var baseline = ascent + 1;
+        return (ascent, descent, baseline, lineHeight);
+    }
 
     /// <summary>
     /// Creates a new instance of the LayoutEngine.
@@ -150,8 +185,8 @@ public sealed class LayoutEngine
         else if (layoutNode.HtmlNode?.Type == HtmlElementType.LineBreak)
         {
             // BR elements create a line break with minimal height (just line height)
-            // We use the font size as a reasonable line height
-            layoutNode.Height = layoutNode.FontSize;
+            var brMetrics = GetLineMetrics(layoutNode.FontSize, layoutNode.FontFamily, layoutNode.FontBold, layoutNode.FontItalic);
+            layoutNode.Height = brMetrics.LineHeight;
             layoutNode.Width = 0;
         }
 
@@ -353,14 +388,12 @@ public sealed class LayoutEngine
             }
             else
             {
-                // Create line boxes that wrap all inline content together
-                var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth);
+                // Create line boxes that wrap all inline content together. Style spans (and the
+                // line height/baseline) are built from the source node of each character.
+                var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth, inlineChildren);
 
                 // Distribute inline elements across lines based on text positions
                 LayoutInlineChildrenOnLines(inlineChildren, lines, inlineContent, node);
-
-                // Add style spans to parent lines to indicate which parts belong to which children
-                BuildParentLineStyleSpans(lines, inlineContent, inlineChildren);
 
                 // Always set node.LineBoxes for rendering, but children also have their own
                 node.LineBoxes = lines;
@@ -371,7 +404,10 @@ public sealed class LayoutEngine
             }
         }
 
-        node.Height = totalHeight;
+        node.ContentHeight = totalHeight;
+        // Height is the border-box: content plus padding, so that borders and the
+        // background are drawn around the full box (e.g. table cells).
+        node.Height = totalHeight + node.PaddingTop + node.PaddingBottom;
         node.X = node.MarginLeft;
         node.Y = 0;
     }
@@ -416,8 +452,11 @@ public sealed class LayoutEngine
             return;
         }
 
-        // Calculate width for each cell
-        var cellWidth = availableWidth / cellCount;
+        // Calculate width per column share; cells with colspan="n" take n shares
+        var totalColspan = rowNode.Children.Sum(c => GetColspan(c));
+        if (totalColspan <= 0)
+            totalColspan = cellCount;
+        var shareWidth = availableWidth / totalColspan;
 
         double currentX = 0;
         double maxCellHeight = 0;
@@ -427,6 +466,8 @@ public sealed class LayoutEngine
         {
             if (cell.LayoutType == LayoutType.Block)
             {
+                var cellWidth = shareWidth * GetColspan(cell);
+
                 // Layout cell with its allocated width
                 LayoutBlockNode(cell, cellWidth);
 
@@ -442,6 +483,20 @@ public sealed class LayoutEngine
         // Row height is the maximum cell height (including any cell margins)
         rowNode.Width = availableWidth;
         rowNode.Height = maxCellHeight;
+    }
+
+    /// <summary>
+    /// Gets the colspan of a table cell (default 1 when not set or invalid).
+    /// </summary>
+    private static int GetColspan(LayoutNode cell)
+    {
+        if (cell.HtmlNode?.Attributes.TryGetValue("colspan", out var value) == true &&
+            int.TryParse(value, out var colspan) && colspan > 0)
+        {
+            return colspan;
+        }
+
+        return 1;
     }
 
     /// <summary>
@@ -483,7 +538,6 @@ public sealed class LayoutEngine
     private void LayoutInlineNode(LayoutNode node, double availableWidth)
     {
         var lines = new List<LineBox>();
-        var lineHeight = node.FontSize * 1.2;
         var currentX = 0.0;
         var currentY = 0.0;
         var currentLineWidth = 0.0;
@@ -492,6 +546,24 @@ public sealed class LayoutEngine
         var charIndex = 0;
         var lineStartChar = 0;
         var innerWidth = (float)(availableWidth - node.PaddingLeft - node.PaddingRight - node.BorderLeftWidth - node.BorderRightWidth);
+
+        // Finalizes the current line (height/baseline derived from the spans on it, see AlignLineSpans)
+        // and optionally advances to the next line.
+        void FinishCurrentLine(bool advanceY)
+        {
+            if (currentLineText.Length == 0)
+                return;
+
+            var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex);
+            lines.Add(line);
+            if (advanceY)
+                currentY += line.Height;
+
+            currentLineText.Clear();
+            currentLineSpans.Clear();
+            currentLineWidth = 0;
+            lineStartChar = charIndex;
+        }
 
         foreach (var child in node.Children)
         {
@@ -514,23 +586,15 @@ public sealed class LayoutEngine
                 else
                 {
                     // Start new line if current line has content
-                    if (currentLineText.Length > 0)
-                    {
-                        var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
-                        lines.Add(line);
-                    }
+                    FinishCurrentLine(advanceY: true);
+                    currentX = 0;
 
                     // Check if text fits on a new line by itself
                     if (textWidth <= innerWidth)
                     {
-                        currentLineText.Clear();
-                        currentLineSpans.Clear();
                         currentLineText.Append(text);
                         currentLineSpans.Add((text, child));
                         currentLineWidth = textWidth;
-                        currentX = 0;
-                        currentY += lineHeight;
-                        lineStartChar = charIndex;
                         child.X = 0;
                         child.Y = currentY;
                         charIndex += text.Length;
@@ -545,34 +609,28 @@ public sealed class LayoutEngine
                             currentLineText.Append(prefix);
                             currentLineSpans.Add((prefix, child));
                             currentLineWidth = MeasureText(prefix, node);
-                            currentY += lineHeight;
-                            lineStartChar = charIndex;
                             child.X = 0;
                             child.Y = currentY;
                             charIndex += prefix.Length;
                             
-                            // Add remaining suffix to next line
+                            // Add remaining suffix to the next line
                             if (suffix.Length > 0)
                             {
                                 // This would require more complex handling for partial text nodes
                                 // For now, we'll just add the suffix to the next line
-                                currentLineText.Clear();
-                                currentLineSpans.Clear();
+                                FinishCurrentLine(advanceY: true);
                                 currentLineText.Append(suffix);
                                 currentLineSpans.Add((suffix, child));
                                 currentLineWidth = MeasureText(suffix, node);
-                                currentY += lineHeight;
-                                lineStartChar = charIndex;
                             }
                         }
                         else
                         {
                             // Even the first character doesn't fit - force it anyway
+                            FinishCurrentLine(advanceY: true);
                             currentLineText.Append(text);
                             currentLineSpans.Add((text, child));
                             currentLineWidth = textWidth;
-                            currentY += lineHeight;
-                            lineStartChar = charIndex;
                             child.X = 0;
                             child.Y = currentY;
                             charIndex += text.Length;
@@ -583,21 +641,13 @@ public sealed class LayoutEngine
             else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
             {
                 // <br/> forces a line break - finalize current line if there's content
-                if (currentLineText.Length > 0)
-                {
-                    var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
-                    lines.Add(line);
-                    currentLineText.Clear();
-                    currentLineSpans.Clear();
-                    currentLineWidth = 0;
-                    lineStartChar = charIndex;
-                }
-                
+                FinishCurrentLine(advanceY: false);
+
                 // Always add an empty line for the <br/> to preserve vertical spacing
-                var emptyLine = CreateLineBox(string.Empty, new List<(string text, LayoutNode sourceNode)>(), 0, currentY, charIndex, charIndex, lineHeight, node.FontSize);
+                var emptyLine = CreateLineBox(string.Empty, new List<(string text, LayoutNode sourceNode)>(), 0, currentY, charIndex, charIndex, fallbackNode: node);
                 lines.Add(emptyLine);
-                currentY += lineHeight;
-                
+                currentY += emptyLine.Height;
+
                 child.X = 0;
                 child.Y = currentY;
             }
@@ -616,18 +666,8 @@ public sealed class LayoutEngine
                 else
                 {
                     // Start new line
-                    if (currentLineText.Length > 0)
-                    {
-                        var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
-                        lines.Add(line);
-                    }
-                    
-                    currentLineText.Clear();
-                    currentLineSpans.Clear();
-                    currentLineWidth = 0;
+                    FinishCurrentLine(advanceY: true);
                     currentX = 0;
-                    currentY += lineHeight;
-                    lineStartChar = charIndex;
                     child.X = 0;
                     child.Y = currentY;
                 }
@@ -635,12 +675,7 @@ public sealed class LayoutEngine
         }
 
         // Add final line if there's remaining content
-        if (currentLineText.Length > 0)
-        {
-            var line = CreateLineBox(currentLineText.ToString(), currentLineSpans, currentLineWidth, currentY, lineStartChar, charIndex, lineHeight, node.FontSize);
-            lines.Add(line);
-            currentY += lineHeight;
-        }
+        FinishCurrentLine(advanceY: true);
 
         // Apply text alignment
         ApplyTextAlignment(lines, node, innerWidth);
@@ -650,14 +685,16 @@ public sealed class LayoutEngine
 
         // Set node dimensions
         node.LineBoxes = lines;
-        node.Height = lines.Count > 0 ? currentY : 0;
+        node.Height = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
         node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
     }
 
     /// <summary>
     /// Creates a LineBox with style spans tracking which nodes the text comes from.
+    /// The line height and per-span baseline offsets are derived from the font metrics of the
+    /// spans on the line (see AlignLineSpans).
     /// </summary>
-    private LineBox CreateLineBox(string text, List<(string text, LayoutNode sourceNode)> spans, double width, double y, int startCharIndex, int endCharIndex, double lineHeight, double fontSize)
+    private LineBox CreateLineBox(string text, List<(string text, LayoutNode sourceNode)> spans, double width, double y, int startCharIndex, int endCharIndex, LayoutNode? fallbackNode = null)
     {
         var line = new LineBox
         {
@@ -665,8 +702,6 @@ public sealed class LayoutEngine
             X = 0,
             Y = y,
             Width = width,
-            Height = lineHeight,
-            Baseline = fontSize,
             StartCharIndex = startCharIndex,
             EndCharIndex = endCharIndex
         };
@@ -687,7 +722,50 @@ public sealed class LayoutEngine
             }
         }
 
+        AlignLineSpans(line, fallbackNode);
         return line;
+    }
+
+    /// <summary>
+    /// Computes the line height from the tallest span and sets each span's baseline offset so
+    /// that all spans on the line are baseline-aligned. For lines with a single font size this
+    /// reduces to that size's own baseline.
+    /// </summary>
+    private void AlignLineSpans(LineBox line, LayoutNode? fallbackNode = null)
+    {
+        if (line.StyleSpans.Count == 0 && fallbackNode is not null)
+        {
+            // Empty line (e.g. from <br/>) - use the fallback node's metrics
+            var fallback = GetLineMetrics(fallbackNode.FontSize, fallbackNode.FontFamily, fallbackNode.FontBold, fallbackNode.FontItalic);
+            line.Height = fallback.LineHeight;
+            line.Baseline = fallback.Baseline;
+            return;
+        }
+
+        var spanMetrics = line.StyleSpans
+            .Select(s => GetLineMetrics(s.SourceNode?.FontSize ?? 16, s.SourceNode?.FontFamily, s.SourceNode?.FontBold ?? false, s.SourceNode?.FontItalic ?? false))
+            .ToList();
+
+        if (spanMetrics.Count == 0)
+            return;
+
+        // The line must fit the largest ascent (top) and the largest descent (bottom) of all
+        // spans on it. The line baseline sits at maxAscent + 1 and all spans are baseline
+        // aligned on it (browser behavior for mixed font sizes). A span's own baseline is
+        // ascent + 1, so its BaselineOffset is the distance from that baseline to the line
+        // baseline: a smaller span (ascent < maxAscent) is drawn lower, a span defining the
+        // line's tallest ascent keeps an offset of 0.
+        var maxAscent = spanMetrics.Max(m => m.Ascent);
+        var maxDescent = spanMetrics.Max(m => m.Descent);
+
+        line.Height = maxAscent + maxDescent + 2;
+        line.Baseline = maxAscent + 1;
+
+        for (var i = 0; i < line.StyleSpans.Count; i++)
+        {
+            var (ascent, _, _, _) = spanMetrics[i];
+            line.StyleSpans[i].BaselineOffset = Math.Max(0, maxAscent - ascent);
+        }
     }
 
     /// <summary>
@@ -801,12 +879,146 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Breaks text into lines based on available width.
+    /// Builds the absolute character ranges of the inline children within the combined text.
     /// </summary>
-    private List<LineBox> BreakTextIntoLines(string text, LayoutNode node, double availableWidth)
+    private List<(int start, int end, LayoutNode child)> BuildChildRanges(List<LayoutNode> inlineChildren)
+    {
+        var ranges = new List<(int start, int end, LayoutNode child)>();
+        int charIndex = 0;
+
+        foreach (var child in inlineChildren)
+        {
+            if (child.HtmlNode?.Type == HtmlElementType.Text)
+            {
+                var text = child.HtmlNode.TextContent ?? string.Empty;
+                ranges.Add((charIndex, charIndex + text.Length, child));
+                charIndex += text.Length;
+            }
+            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+            {
+                charIndex += 1;
+            }
+            else if (child.LayoutType == LayoutType.Inline)
+            {
+                var text = CollectTextFromNode(child);
+                ranges.Add((charIndex, charIndex + text.Length, child));
+                charIndex += text.Length;
+            }
+        }
+
+        return ranges;
+    }
+
+    /// <summary>
+    /// Maps the characters of a single inline child (in order) to their top-level source node.
+    /// Nested inline elements are attributed to the top-level inline child so that a line gets
+    /// one style span per top-level styled element (matching how the inline flow is laid out).
+    /// </summary>
+    private void MapInlineChildSource(LayoutNode child, LayoutNode topLevelSource, List<LayoutNode> map)
+    {
+        var source = child.LayoutType == LayoutType.Inline ? topLevelSource : child;
+
+        if (child.HtmlNode?.Type == HtmlElementType.Text)
+        {
+            var text = child.HtmlNode.TextContent ?? string.Empty;
+            for (var i = 0; i < text.Length; i++)
+                map.Add(source);
+        }
+        else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
+        {
+            map.Add(source);
+        }
+        else
+        {
+            foreach (var grandChild in child.Children)
+                MapInlineChildSource(grandChild, topLevelSource, map);
+        }
+    }
+
+    /// <summary>
+    /// Builds a map of absolute character index -> source layout node for the combined inline
+    /// text (same order as CollectInlineContent). When no inline children are provided, every
+    /// character maps to the node itself.
+    /// </summary>
+    private List<LayoutNode> BuildCharSourceMap(string text, LayoutNode node, List<LayoutNode>? inlineChildren)
+    {
+        var map = new List<LayoutNode>(text.Length);
+
+        if (inlineChildren is not null)
+        {
+            foreach (var child in inlineChildren)
+            {
+                MapInlineChildSource(child, child, map);
+            }
+        }
+        else
+        {
+            for (var i = 0; i < text.Length; i++)
+                map.Add(node);
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Builds the style spans of a line (absolute character range -> relative spans pointing at
+    /// the source node) and derives the line height/baseline from those spans.
+    /// </summary>
+    private void BuildLineStyleSpans(LineBox line, List<LayoutNode> charSources)
+    {
+        if (string.IsNullOrEmpty(line.Text))
+            return;
+
+        var absStart = Math.Max(0, line.StartCharIndex);
+        // The absolute range may include a trailing space that is not part of the line text
+        var absEnd = Math.Min(charSources.Count, absStart + line.Text.Length);
+
+        LayoutNode? source = null;
+        var spanStart = absStart;
+
+        for (var i = absStart; i < absEnd; i++)
+        {
+            var current = i < charSources.Count ? charSources[i] : null;
+
+            if (source is not null && ReferenceEquals(current, source))
+                continue;
+
+            if (source is not null)
+            {
+                line.StyleSpans.Add(new LineBox.InlineStyleSpan
+                {
+                    StartIndex = spanStart - absStart,
+                    Length = i - spanStart,
+                    SourceNode = source
+                });
+            }
+
+            source = current;
+            spanStart = i;
+        }
+
+        if (source is not null)
+        {
+            line.StyleSpans.Add(new LineBox.InlineStyleSpan
+            {
+                StartIndex = spanStart - absStart,
+                Length = absEnd - spanStart,
+                SourceNode = source
+            });
+        }
+
+        AlignLineSpans(line);
+    }
+
+    /// <summary>
+    /// Breaks text into lines based on available width.
+    /// Line height/baseline are derived from font metrics of the spans on each line, so mixed
+    /// font-size lines get a correct (larger) line height.
+    /// </summary>
+    private List<LineBox> BreakTextIntoLines(string text, LayoutNode node, double availableWidth, List<LayoutNode>? inlineChildren = null)
     {
         var lines = new List<LineBox>();
-        var lineHeight = node.FontSize * 1.2;
+        var charSources = BuildCharSourceMap(text, node, inlineChildren);
         var currentY = 0.0;
         var currentLineText = new System.Text.StringBuilder();
         var currentWidth = 0.0;
@@ -845,14 +1057,13 @@ public sealed class LayoutEngine
                             X = 0,
                             Y = currentY,
                             Width = currentWidth,
-                            Height = lineHeight,
-                            Baseline = node.FontSize,
                             StartCharIndex = lineStartChar,
                             EndCharIndex = charIndex
                         };
+                        BuildLineStyleSpans(line, charSources);
                         lines.Add(line);
 
-                        currentY += lineHeight;
+                        currentY += line.Height;
                         lineStartChar = charIndex;
                     }
 
@@ -874,13 +1085,12 @@ public sealed class LayoutEngine
                     X = 0,
                     Y = currentY,
                     Width = currentWidth,
-                    Height = lineHeight,
-                    Baseline = node.FontSize,
                     StartCharIndex = lineStartChar,
                     EndCharIndex = charIndex
                 };
+                BuildLineStyleSpans(line, charSources);
                 lines.Add(line);
-                currentY += lineHeight;
+                currentY += line.Height;
                 lineStartChar = charIndex;
                 currentLineText.Clear();
                 currentWidth = 0;
@@ -894,13 +1104,12 @@ public sealed class LayoutEngine
                     X = 0,
                     Y = currentY,
                     Width = 0,
-                    Height = lineHeight,
-                    Baseline = node.FontSize,
                     StartCharIndex = charIndex,
                     EndCharIndex = charIndex
                 };
+                AlignLineSpans(emptyLine, node);
                 lines.Add(emptyLine);
-                currentY += lineHeight;
+                currentY += emptyLine.Height;
             }
 
             charIndex++; // Account for newline character
@@ -917,8 +1126,6 @@ public sealed class LayoutEngine
     {
         if (lines.Count == 0)
             return;
-
-        var lineHeight = parentNode.FontSize * 1.2;
 
         // Build a map of character ranges for each child
         var childRanges = new List<(int start, int end, LayoutNode child)>();
@@ -948,7 +1155,7 @@ public sealed class LayoutEngine
         for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
         {
             var line = lines[lineIndex];
-            var lineStartY = lineIndex * lineHeight;
+            var lineStartY = line.Y;
 
             var lineStartChar = line.StartCharIndex >= 0 ? line.StartCharIndex : 0;
             var lineEndChar = line.EndCharIndex >= 0 ? line.EndCharIndex : (lineStartChar + (line.Text?.Length ?? 0));
@@ -968,16 +1175,14 @@ public sealed class LayoutEngine
                     child.X = currentX;
                     child.Y = lineStartY;
                     child.Width = textWidth;
-                    child.Height = lineHeight;
+                    child.Height = line.Height;
 
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
                         Y = 0,
-                        Width = textWidth,
-                        Height = lineHeight,
-                        Baseline = parentNode.FontSize
+                        Width = textWidth
                     };
 
                     // Add style span pointing to parent node for text
@@ -987,6 +1192,7 @@ public sealed class LayoutEngine
                         Length = text.Length,
                         SourceNode = parentNode
                     });
+                    AlignLineSpans(lineBox);
 
                     child.LineBoxes.Add(lineBox);
 
@@ -1000,16 +1206,14 @@ public sealed class LayoutEngine
                     child.X = currentX;
                     child.Y = lineStartY;
                     child.Width = textWidth;
-                    child.Height = lineHeight;
+                    child.Height = line.Height;
 
                     var lineBox = new LineBox
                     {
                         Text = text,
                         X = 0,
                         Y = 0,
-                        Width = textWidth,
-                        Height = lineHeight,
-                        Baseline = parentNode.FontSize
+                        Width = textWidth
                     };
 
                     // Add style span pointing to the child (link) node
@@ -1019,6 +1223,7 @@ public sealed class LayoutEngine
                         Length = text.Length,
                         SourceNode = child
                     });
+                    AlignLineSpans(lineBox);
 
                     child.LineBoxes.Add(lineBox);
 

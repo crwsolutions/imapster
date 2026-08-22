@@ -491,30 +491,56 @@ public partial class HtmlViewer : SKCanvasView
         }
     }
 
+    /// <summary>
+    /// Creates a Skia font for a layout node (family, weight, slant, size).
+    /// </summary>
+    private SKFont CreateNodeFont(LayoutNode node)
+    {
+        var fontFamily = node.FontFamily ?? _renderContext.FontFamily;
+        var fontWeight = node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+        var fontSlant = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+        var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
+        return new SKFont(typeface) { Size = (float)node.FontSize };
+    }
+
+    /// <summary>
+    /// Draws a single styled text span (text plus its underline/strikethrough decoration)
+    /// and returns the drawn width so the caller can advance the X position.
+    /// </summary>
+    private double DrawSpan(SKCanvas canvas, SKFont font, string text, double x, float baseline, LayoutNode sourceNode, SKPaint paint, bool isLink)
+    {
+        canvas.DrawText(text, (float)x, baseline, SKTextAlign.Left, font, paint);
+        var width = font.MeasureText(text);
+
+        if (sourceNode.TextDecoration != TextDecoration.None)
+        {
+            var decorationY = sourceNode.TextDecoration == TextDecoration.LineThrough
+                ? baseline - (float)(sourceNode.FontSize * 0.2)
+                : baseline + (float)(sourceNode.FontSize * 0.1);
+            canvas.DrawLine((float)x, decorationY, (float)(x + width), decorationY, paint.Color);
+        }
+
+        // Add underline for links if no text decoration
+        if (isLink && sourceNode.TextDecoration == TextDecoration.None)
+        {
+            var underlineY = baseline + (float)(sourceNode.FontSize * 0.1);
+            canvas.DrawLine((float)x, underlineY, (float)(x + width), underlineY, _renderContext.LinkColor.ParseColorString());
+        }
+
+        return width;
+    }
+
     private void RenderLine(SKCanvas canvas, LineBox line, double x, double y, LayoutNode node)
     {
         // Note: We don't skip empty lines - they still reserve vertical space for proper layout
 
         if (!string.IsNullOrEmpty(line.Text))
         {
-            var fontFamily = node.FontFamily ?? _renderContext.FontFamily;
-            var fontWeight = node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
-            var fontSlant = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-            var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
-            using var font = new SKFont(typeface) { Size = (float)node.FontSize };
+            using var font = CreateNodeFont(node);
 
             // Render text with per-span styling using StyleSpans
             if (line.StyleSpans.Count > 0)
             {
-                if (line.Text.Contains("fbto"))
-                {
-                    System.Diagnostics.Debug.WriteLine($"RenderLine FBTO: text='{line.Text}' spans={line.StyleSpans.Count}");
-                    foreach (var span in line.StyleSpans.OrderBy(s => s.StartIndex))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"  span: start={span.StartIndex} len={span.Length} text='{line.Text.Substring(span.StartIndex, span.Length)}' href={span.SourceNode?.Href}");
-                    }
-                }
-
                 // Sort spans by StartIndex to ensure correct rendering order
                 var sortedSpans = line.StyleSpans.OrderBy(s => s.StartIndex).ToList();
 
@@ -544,7 +570,8 @@ public partial class HtmlViewer : SKCanvasView
                         textIndex = span.StartIndex;
                     }
 
-                    // Render the styled span
+                    // Render the styled span with its own font and baseline offset, so
+                    // mixed font-size lines are baseline-aligned per span.
                     var spanText = line.Text.Substring(span.StartIndex, span.Length);
                     var sourceNode = span.SourceNode ?? node;
 
@@ -555,36 +582,24 @@ public partial class HtmlViewer : SKCanvasView
                     };
 
                     // Apply link color if source node has href
-                    if (sourceNode.Href is not null && _renderContext.IsLinksEnabled)
-                    {
+                    var isSpanLink = sourceNode.Href is not null && _renderContext.IsLinksEnabled;
+                    if (isSpanLink)
                         paint.Color = _renderContext.LinkColor.ParseColorString();
-                    }
 
-                    canvas.DrawText(spanText, (float)currentX, (float)(y + line.Baseline), SKTextAlign.Left, font, paint);
-
-                    // Draw decorations
-                    var spanWidth = font.MeasureText(spanText);
-
-                    if (sourceNode.TextDecoration != TextDecoration.None)
+                    // Reuse the line font when the span's source is the node itself to
+                    // avoid a redundant font creation; otherwise create the span's own
+                    // font and dispose it when this span is done.
+                    var spanBaseline = (float)(y + line.Baseline + span.BaselineOffset);
+                    if (ReferenceEquals(sourceNode, node))
                     {
-                        var decorationY = sourceNode.TextDecoration switch
-                        {
-                            TextDecoration.Underline => (float)(y + line.Baseline + node.FontSize * 0.1),
-                            TextDecoration.LineThrough => (float)(y + line.Baseline - node.FontSize * 0.2),
-                            _ => (float)(y + line.Baseline + node.FontSize * 0.1)
-                        };
-
-                        canvas.DrawLine((float)currentX, decorationY, (float)(currentX + spanWidth), decorationY, paint.Color);
+                        currentX += DrawSpan(canvas, font, spanText, currentX, spanBaseline, sourceNode, paint, isSpanLink);
                     }
-
-                    // Add underline for links if no text decoration
-                    if (sourceNode.Href is not null && _renderContext.IsLinksEnabled && sourceNode.TextDecoration == TextDecoration.None)
+                    else
                     {
-                        var underlineY = (float)(y + line.Baseline + node.FontSize * 0.1);
-                        canvas.DrawLine((float)currentX, underlineY, (float)(currentX + spanWidth), underlineY, _renderContext.LinkColor.ParseColorString());
+                        using var spanFont = CreateNodeFont(sourceNode);
+                        currentX += DrawSpan(canvas, spanFont, spanText, currentX, spanBaseline, sourceNode, paint, isSpanLink);
                     }
 
-                    currentX += spanWidth;
                     textIndex = span.StartIndex + span.Length;
                 }
 
