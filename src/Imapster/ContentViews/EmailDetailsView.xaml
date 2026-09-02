@@ -70,12 +70,12 @@
                                 <Grid ColumnDefinitions="Auto, Auto, Auto" ColumnSpacing="10" VerticalOptions="Start">
                                     <Label Text="{Binding FileName}" Grid.Column="0" VerticalOptions="Center" TextColor="White" />
                                     <Button Text="Archive" Grid.Column="1" 
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailViewModel}}, Path=ArchiveAttachmentCommand}"
+                                            Command="{Binding Source={x:Reference ThisView}, Path=Email.ArchiveAttachmentCommand}"
                                             CommandParameter="{Binding .}"
                                             WidthRequest="80"
                                             HeightRequest="30" />
                                     <Button Text="Open" Grid.Column="2" 
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmailViewModel}}, Path=OpenAttachmentCommand}"
+                                            Command="{Binding Source={x:Reference ThisView}, Path=Email.OpenAttachmentCommand}"
                                             CommandParameter="{Binding .}"
                                             WidthRequest="80"
                                             HeightRequest="30" />
