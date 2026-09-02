@@ -116,5 +116,12 @@ public sealed class LineBox
         /// Gets or sets the source node that provides the styling for this span.
         /// </summary>
         public LayoutNode? SourceNode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the baseline offset for this span relative to the line baseline.
+        /// 0 (default) means the span sits on the shared line baseline; non-zero values
+        /// are used for mixed font-size lines where each span is baseline-aligned.
+        /// </summary>
+        public double BaselineOffset { get; set; }
     }
 }

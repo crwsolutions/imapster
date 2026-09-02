@@ -6,6 +6,8 @@ public partial class MainPage : ContentPage
     {
         BindingContext = viewModel;
         InitializeComponent();
+
+        EmailDataGrid.SelectionChanged += (_, _) => viewModel.UpdateSelectionStatus();
     }
 
     protected override async void OnNavigatedTo(NavigatedToEventArgs args)

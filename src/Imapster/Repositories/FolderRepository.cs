@@ -48,15 +48,11 @@ public class FolderRepository : IFolderRepository
     }
     public async Task UpsertFolderAsync(FolderViewModel folder)
     {
-        var existingFolder = await GetFolderByIdAsync(folder.AccountId, folder.Id);
-        if (existingFolder == null)
-        {
-            await AddFolderAsync(folder);
-        }
-        else
-        {
-            await UpdateFolderAsync(folder);
-        }
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.ExecuteAsync(
+            "INSERT INTO Folders (Id, Name, UnreadCount, IsTrash, AccountId) VALUES (@Id, @Name, @UnreadCount, @IsTrash, @AccountId) " +
+            "ON CONFLICT (AccountId, Id) DO UPDATE SET Name = @Name, UnreadCount = @UnreadCount, IsTrash = @IsTrash",
+            folder);
     }
 
     public async Task DeleteFolderAsync(int accountId, string id)

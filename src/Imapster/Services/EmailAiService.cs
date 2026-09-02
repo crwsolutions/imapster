@@ -1,3 +1,4 @@
+using Imapster.HtmlViewer;
 using Imapster.Repositories;
 using Microsoft.Extensions.AI;
 
@@ -211,7 +212,7 @@ public sealed class EmailAiService
                 Bijlagen: {attachmentsInfo}
 
                 Inhoud:
-                {email.Body}
+                {HtmlMarkdownConverter.ToMarkdown(email.Body)}
                 """;
     }
 

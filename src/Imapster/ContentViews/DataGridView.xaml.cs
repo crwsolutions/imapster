@@ -58,7 +58,7 @@ namespace Imapster.ContentViews
         public static readonly BindableProperty CountProperty =
             BindableProperty.Create(nameof(Count), typeof(int), typeof(DataGridView), default(int), BindingMode.TwoWay);
 
-        public event EventHandler<IDataGridItem>? SelectionChanged;
+        public event EventHandler<IDataGridItem?>? SelectionChanged;
 
         public object? SelectedItem
         {
@@ -433,6 +433,7 @@ namespace Imapster.ContentViews
             }
 
             RefreshData();
+            RaiseSelectionChanged();
             SaveState();
         }
 
@@ -543,9 +544,6 @@ namespace Imapster.ContentViews
             // Update SelectedItem for single-click selection
             SelectedItem = rowItem;
 
-            // Raise selection changed event
-            SelectionChanged?.Invoke(this, rowItem);
-
             if (IsCtrlPressed()) // Ctrl+klik: toggle selectie van deze rij
             {
                 rowItem.IsSelected = !rowItem.IsSelected;
@@ -569,6 +567,9 @@ namespace Imapster.ContentViews
                 rowItem.IsSelected = true;
                 _lastSelectedIndex = index;
             }
+
+            // Raise selection changed event after the selection has been updated
+            RaiseSelectionChanged(rowItem);
         }
 
         private bool IsCtrlPressed()
@@ -616,11 +617,18 @@ namespace Imapster.ContentViews
         private void OnClearSelectionTapped(object? sender, EventArgs e)
         {
             DisplayedItems?.ToList().ForEach(item => item.IsSelected = false);
+            RaiseSelectionChanged();
         }
 
         private void OnSelectAllTapped(object? sender, EventArgs e)
         {
             DisplayedItems?.ToList().ForEach(item => item.IsSelected = true);
+            RaiseSelectionChanged();
+        }
+
+        private void RaiseSelectionChanged(IDataGridItem? item = null)
+        {
+            SelectionChanged?.Invoke(this, item);
         }
     }
 }

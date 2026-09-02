@@ -59,7 +59,7 @@
             <cv:SplitView Grid.Row="1" Grid.Column="1">
                 <!-- Left Content: Email List -->
                 <cv:SplitView.LeftContent>
-                    <cv:DataGridView ItemsSource="{Binding Emails}" 
+                    <cv:DataGridView x:Name="EmailDataGrid" ItemsSource="{Binding Emails}"
                                      DisplayedItems="{Binding DisplayedItems}" 
                                      Count="{Binding RowCount}"
                                      SelectedItem="{Binding SelectedEmail, Mode=TwoWay}">
