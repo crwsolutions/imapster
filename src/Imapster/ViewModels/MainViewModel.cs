@@ -44,6 +44,7 @@ public partial class MainViewModel : BaseViewModel
 
         // Reset selected email when folder changes
         SelectedEmail = null;
+        UpdateSelectionStatus();
 
         _ = LoadEmailsForFolderAsync(value.Id);
     }
@@ -94,6 +95,14 @@ public partial class MainViewModel : BaseViewModel
         _folderPicker = folderPicker;
 
         Title = "IMAP Client";
+    }
+
+    public void UpdateSelectionStatus()
+    {
+        var count = DisplayedItems?.Count(item => item.IsSelected) ?? 0;
+        StatusText = count == 0
+            ? "Ready"
+            : $"{count} {(count == 1 ? "message" : "messages")} selected";
     }
 
     internal async Task LoadDataAsync()
