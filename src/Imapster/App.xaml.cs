@@ -1,4 +1,4 @@
-﻿namespace Imapster;
+namespace Imapster;
 
 public partial class App : Application
 {
@@ -11,5 +11,7 @@ public partial class App : Application
         InitializeComponent();
     }
 
-    protected override Window CreateWindow(IActivationState? activationState) => new Window(new AppShell());
+    //protected override Window CreateWindow(IActivationState? activationState) => new Window(new AppShell());
+    protected override Window CreateWindow(IActivationState? activationState) =>
+        Services.GetService<AppWindow>()!;
 }

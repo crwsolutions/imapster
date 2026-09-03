@@ -51,10 +51,10 @@
     
     
 <text
-   xml:space="preserve"
-   id="text4"
-   style="font-size:40px;line-height:1.25;font-family:'Font Awesome 6 Free';-inkscape-font-specification:'Font Awesome 6 Free';white-space:pre;shape-inside:url(#rect4);display:inline;fill:#f65e00;fill-opacity:1;stroke-width:0.155947"
-   transform="matrix(6.4124131,0,0,6.4124131,-457.90091,-665.49452)" /><path
+       xml:space="preserve"
+       id="text4"
+       style="font-size:40px;line-height:1.25;font-family:'Font Awesome 6 Free';-inkscape-font-specification:'Font Awesome 6 Free';white-space:pre;shape-inside:url(#rect4);display:inline;fill:#f65e00;fill-opacity:1;stroke-width:0.155947"
+       transform="matrix(6.4124131,0,0,6.4124131,-457.90091,-665.49452)" /><path
    d="m 242.43164,35.007812 c -2.10937,0 -3.75,1.71875 -3.75,3.75 0,1.25 0.54688,2.34375 1.48438,3.046875 l 16.95312,12.734375 c 0.9375,0.703125 2.10938,0.703125 3.04688,0 l 16.95312,-12.734375 c 0.9375,-0.703125 1.5625,-1.796875 1.5625,-3.046875 0,-2.03125 -1.71875,-3.75 -3.75,-3.75 z m -3.75,8.75 v 16.25 c 0,2.8125 2.1875,5 5,5 h 30 c 2.73438,0 5,-2.1875 5,-5 v -16.25 l -17.03125,12.8125 c -1.79687,1.328125 -4.21875,1.328125 -6.01562,0 z"
    id="text2"
    style="font-size:40px;line-height:1.25;font-family:'Font Awesome 6 Free';-inkscape-font-specification:'Font Awesome 6 Free';writing-mode:tb-rl;white-space:pre;stroke-width:0.0877194;fill:#0f766e;fill-opacity:1"

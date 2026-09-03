@@ -65,6 +65,10 @@ namespace Imapster
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
+            //Window
+            builder.Services.AddSingleton<AppWindow>();
+            builder.Services.AddSingleton<AppShell>();
+
             // Register repositories
             builder.Services.AddSingleton<IFolderRepository, FolderRepository>();
             builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
