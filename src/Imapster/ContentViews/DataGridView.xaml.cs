@@ -2,7 +2,6 @@ using CommunityToolkit.Maui.Core.Extensions;
 using CommunityToolkit.Maui.Extensions;
 using Imapster.ContentViews.Popups;
 using Imapster.Converters;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Text.Json;
@@ -33,7 +32,14 @@ namespace Imapster.ContentViews
         }
 
         public static readonly BindableProperty ColumnsProperty =
-            BindableProperty.Create(nameof(Columns), typeof(IList<DataGridColumn>), typeof(DataGridView), new List<DataGridColumn>(), BindingMode.OneTime);
+            BindableProperty.Create(nameof(Columns), typeof(IList<DataGridColumn>), typeof(DataGridView), new List<DataGridColumn>(), BindingMode.OneTime, propertyChanged: OnColumnsChanged);
+
+        private static void OnColumnsChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            var control = (DataGridView)bindable;
+            control.RebuildHeaders();
+            control.RebuildRows();
+        }
 
         public IList<object> SelectedItems { get; } = new List<object>();
 
@@ -76,7 +82,19 @@ namespace Imapster.ContentViews
             // We don't need to do anything here as the selection is already handled
         }
 
-        public DataGridView() => InitializeComponent();
+        public DataGridView()
+        {
+            InitializeComponent();
+            Loaded += (_, _) =>
+            {
+                if (Columns.Count > 0)
+                {
+                    RebuildHeaders();
+                }
+
+                RebuildRows();
+            };
+        }
 
         private static void OnItemsSourceChanged(BindableObject bindable, object oldValue, object newValue)
         {
@@ -124,26 +142,22 @@ namespace Imapster.ContentViews
             }
 
             var items = source.Cast<IDataGridItem>().ToList();
-
-            // Apply filters
             var filteredItems = ApplyFilters(items);
-
-            // Apply sorting
             var sortedItems = ApplySorting(filteredItems);
 
-            // Set the DisplayedItems property
             DisplayedItems = sortedItems.ToObservableCollection();
-
-            // Set the Count property
             Count = DisplayedItems.Count;
 
-            // Rebuild the UI
-            RebuildHeaders();
-            RebuildRows();
+            if (DataCollectionView is not null)
+            {
+                RebuildRows();
+            }
         }
 
-        private IEnumerable<IDataGridItem> ApplyFilters(IEnumerable<IDataGridItem> filteredItems)
+        private IEnumerable<IDataGridItem> ApplyFilters(IEnumerable<IDataGridItem> source)
         {
+            var filteredItems = source;
+
             foreach (var filter in _filters.Where(f => f.Value?.Count > 0))
             {
                 var columnKey = filter.Key;
@@ -153,19 +167,23 @@ namespace Imapster.ContentViews
                     continue;
                 }
 
-                // Create SearchValues<string> once per filter
-                var stringArray = filter.Value
-                    .Where(v => v is not null)
-                    .Select(v => v!.ToString())
-                    .ToArray();
+                var allowedValues = new HashSet<string>(
+                    filter.Value
+                        .Where(v => v is not null)
+                        .Select(v => v!.ToString())
+                        .Where(value => !string.IsNullOrEmpty(value)),
+                    StringComparer.OrdinalIgnoreCase);
 
-                var searchValues = SearchValues.Create(stringArray.AsSpan()!, StringComparison.OrdinalIgnoreCase);
+                if (allowedValues.Count == 0)
+                {
+                    continue;
+                }
 
                 filteredItems = filteredItems
                     .Where(item =>
                     {
                         var value = item.GetValue(columnKey)?.ToString();
-                        return value is not null && searchValues.Contains(value);
+                        return !string.IsNullOrEmpty(value) && allowedValues.Contains(value);
                     });
             }
 
@@ -186,15 +204,42 @@ namespace Imapster.ContentViews
             }
 
             var sortedItems = items.ToList();
+            sortedItems.Sort((left, right) =>
+            {
+                var leftValue = left.GetValue(_currentSortKey);
+                var rightValue = right.GetValue(_currentSortKey);
+                var comparison = CompareValues(leftValue, rightValue);
+                return _sortAscending ? comparison : -comparison;
+            });
 
-            if (_sortAscending)
+            return sortedItems;
+        }
+
+        private static int CompareValues(object? leftValue, object? rightValue)
+        {
+            if (leftValue is null && rightValue is null)
             {
-                return sortedItems.OrderBy(item => item.GetValue(_currentSortKey));
+                return 0;
             }
-            else
+
+            if (leftValue is null)
             {
-                return sortedItems.OrderByDescending(item => item.GetValue(_currentSortKey));
+                return -1;
             }
+
+            if (rightValue is null)
+            {
+                return 1;
+            }
+
+            if (leftValue is IComparable comparableLeft && leftValue.GetType() == rightValue.GetType())
+            {
+                return comparableLeft.CompareTo(rightValue);
+            }
+
+            var leftText = leftValue.ToString();
+            var rightText = rightValue.ToString();
+            return string.Compare(leftText, rightText, StringComparison.OrdinalIgnoreCase);
         }
 
         private void RebuildHeaders()
@@ -316,6 +361,11 @@ namespace Imapster.ContentViews
 
         private void RebuildRows()
         {
+            if (DataCollectionView is null)
+            {
+                return;
+            }
+
             // Clear existing rows
             DataCollectionView.ItemsSource = null;
 
