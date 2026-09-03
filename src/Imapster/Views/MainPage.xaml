@@ -45,8 +45,10 @@
 
 
         <!-- Main content area - split into two columns -->
-        <Grid Grid.Row="2" RowDefinitions="52, *" ColumnDefinitions="auto, *" RowSpacing="8">
-            <Label Text="Folders" FontAttributes="Bold" Padding="12,0" VerticalOptions="Center" />
+        <Grid Grid.Row="2" RowDefinitions="60, *" ColumnDefinitions="auto, *">
+            <Grid Background="{StaticResource Gray600}" >
+                <Label Text="Folders" FontAttributes="Bold" Padding="12,0" VerticalOptions="Center" />
+            </Grid>
             
             <!-- Left side: Folder Tree View (1/3 width) -->
             <Border Grid.Row="1" Grid.Column="0" BackgroundColor="{StaticResource Gray600}" Margin="0,0,1,0">
@@ -56,7 +58,7 @@
             </Border>
 
             <!-- Right side: SplitView with Email List (left) and Email Details (right) -->
-            <cv:SplitView Grid.Row="1" Grid.Column="1">
+            <cv:SplitView Grid.RowSpan="2" Grid.Column="1">
                 <!-- Left Content: Email List -->
                 <cv:SplitView.LeftContent>
                     <cv:DataGridView x:Name="EmailDataGrid" ItemsSource="{Binding Emails}"

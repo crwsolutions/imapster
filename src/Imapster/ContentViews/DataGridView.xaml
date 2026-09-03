@@ -7,12 +7,14 @@
     <ContentView.Content>
         <Grid RowDefinitions="auto, auto, *">
             <!-- buttons -->
-            <HorizontalStackLayout Spacing="8" Margin="8" HorizontalOptions="End">
-                <Button Text="Clear selection" Clicked="OnClearSelectionTapped" />
-                <Button Text="Select all" Clicked="OnSelectAllTapped" />
-                <Button Text="Clear filter" Clicked="OnClearFilterTapped" />
-                <Button Text="Clear sort" Clicked="OnClearSortTapped" />
-            </HorizontalStackLayout>
+            <Grid Background="{StaticResource Gray600}">
+                <HorizontalStackLayout Spacing="8" Margin="8" HorizontalOptions="End">
+                    <Button Text="Clear selection" Clicked="OnClearSelectionTapped" />
+                    <Button Text="Select all" Clicked="OnSelectAllTapped" />
+                    <Button Text="Clear filter" Clicked="OnClearFilterTapped" />
+                    <Button Text="Clear sort" Clicked="OnClearSortTapped" />
+                </HorizontalStackLayout>
+            </Grid>
 
             <!-- Header Grid -->
             <Grid x:Name="HeaderGrid" BackgroundColor="#2F333C" Grid.Row="1" />
