@@ -44,6 +44,17 @@ public sealed partial class HtmlParser
 
     private void ParseNode(IHtmlElement element, HtmlNode parentNode, bool isPreformatted = false)
     {
+        // Elements with display: none (e.g. email "preheader" hacks) are not rendered
+        // by browsers, so they are skipped entirely and must not reach the layout engine.
+        var styleAttribute = element.GetAttribute("style");
+        if (styleAttribute is not null && styleAttribute.Contains("display", StringComparison.OrdinalIgnoreCase))
+        {
+            var displayProbe = new HtmlStyle();
+            ParseInlineStyles(element, displayProbe);
+            if (Display.IsNone(displayProbe.Display))
+                return;
+        }
+
         var node = new HtmlNode
         {
             Type = MapElementType(element.TagName),

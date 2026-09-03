@@ -157,6 +157,18 @@ public sealed class LayoutEngine
             WidthSet = mergedStyle.WidthSet
         };
 
+        // When the CSS width is not set, fall back to the legacy HTML width attribute,
+        // which is commonly used on tables in marketing emails (e.g. <table width="640">).
+        // Percentage values are resolved against the available width.
+        if (!layoutNode.WidthSet &&
+            htmlNode.Type is HtmlElementType.Table or HtmlElementType.TableCell or HtmlElementType.TableHeaderCell &&
+            htmlNode.Attributes.TryGetValue("width", out var widthAttribute) &&
+            TryParseLegacyWidth(widthAttribute, availableWidth, out var attributeWidth))
+        {
+            layoutNode.Width = attributeWidth;
+            layoutNode.WidthSet = true;
+        }
+
         // Apply default margins for block elements if not explicitly set
         ApplyDefaultMargins(layoutNode, htmlNode.Type, mergedStyle.FontSize);
 
@@ -327,6 +339,11 @@ public sealed class LayoutEngine
     /// </summary>
     private void LayoutBlockNode(LayoutNode node, double availableWidth)
     {
+        // Clamp fixed widths to the containing block so nested fixed-width tables
+        // (common in marketing emails) never overflow their parent cell.
+        if (node.WidthSet && node.Width > availableWidth)
+            node.Width = availableWidth;
+
         var contentWidth = node.WidthSet ? node.Width : availableWidth - node.MarginLeft - node.MarginRight;
 
         // Calculate content width accounting for padding and borders
@@ -441,10 +458,13 @@ public sealed class LayoutEngine
 
     /// <summary>
     /// Layouts a table row node with cells arranged horizontally.
+    /// Cells with an explicit width (CSS width or legacy width attribute) keep that width;
+    /// the remaining space is distributed evenly over the flexible cells.
     /// </summary>
     private void LayoutTableRow(LayoutNode rowNode, double availableWidth)
     {
-        var cellCount = rowNode.Children.Count;
+        var cells = rowNode.Children.Where(c => c.LayoutType == LayoutType.Block).ToList();
+        var cellCount = cells.Count;
         if (cellCount == 0)
         {
             rowNode.Height = 0;
@@ -452,32 +472,65 @@ public sealed class LayoutEngine
             return;
         }
 
-        // Calculate width per column share; cells with colspan="n" take n shares
-        var totalColspan = rowNode.Children.Sum(c => GetColspan(c));
-        if (totalColspan <= 0)
-            totalColspan = cellCount;
-        var shareWidth = availableWidth / totalColspan;
+        // Determine each cell's explicit width (if any) and the total flexible colspan.
+        var fixedTotal = 0.0;
+        var flexibleColspan = 0;
+        var cellWidths = new double[cellCount];
+
+        for (var i = 0; i < cellCount; i++)
+        {
+            if (cells[i].WidthSet)
+            {
+                cellWidths[i] = Math.Min(cells[i].Width, availableWidth);
+                fixedTotal += cellWidths[i];
+            }
+            else
+            {
+                flexibleColspan += GetColspan(cells[i]);
+            }
+        }
+
+        // If the explicit widths exceed the available width, scale them down proportionally
+        // so the row never overflows.
+        if (fixedTotal > availableWidth && fixedTotal > 0)
+        {
+            var scale = availableWidth / fixedTotal;
+            for (var i = 0; i < cellCount; i++)
+            {
+                if (cells[i].WidthSet)
+                    cellWidths[i] *= scale;
+            }
+            fixedTotal = availableWidth;
+        }
+
+        var flexibleShare = flexibleColspan > 0
+            ? Math.Max(availableWidth - fixedTotal, 0) / flexibleColspan
+            : 0;
 
         double currentX = 0;
         double maxCellHeight = 0;
 
         // Layout each cell horizontally
-        foreach (var cell in rowNode.Children)
+        for (var i = 0; i < cellCount; i++)
         {
-            if (cell.LayoutType == LayoutType.Block)
-            {
-                var cellWidth = shareWidth * GetColspan(cell);
+            var cell = cells[i];
+            var cellWidth = cell.WidthSet ? cellWidths[i] : flexibleShare * GetColspan(cell);
 
-                // Layout cell with its allocated width
-                LayoutBlockNode(cell, cellWidth);
+            // A fixed-width cell may be allocated less space than its explicit width (e.g.
+            // when the row's fixed widths exceed the available width and are scaled down);
+            // in that case the row allocation wins so the row never overflows.
+            if (cell.WidthSet && cellWidth < cell.Width)
+                cell.Width = cellWidth;
 
-                // Position cell horizontally
-                cell.X = currentX;
-                cell.Y = 0;
+            // Layout cell with its allocated width
+            LayoutBlockNode(cell, cellWidth);
 
-                currentX += cellWidth;
-                maxCellHeight = Math.Max(maxCellHeight, cell.Height);
-            }
+            // Position cell horizontally
+            cell.X = currentX;
+            cell.Y = 0;
+
+            currentX += cellWidth;
+            maxCellHeight = Math.Max(maxCellHeight, cell.Height);
         }
 
         // Row height is the maximum cell height (including any cell margins)
@@ -497,6 +550,39 @@ public sealed class LayoutEngine
         }
 
         return 1;
+    }
+
+    /// <summary>
+    /// Parses a legacy HTML width attribute value (e.g. width="640" or width="100%").
+    /// Pixel values are clamped to the available width so fixed-width tables never
+    /// overflow the viewport; percentage values are resolved against the available width.
+    /// </summary>
+    private static bool TryParseLegacyWidth(string value, double availableWidth, out double width)
+    {
+        width = 0;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var trimmed = value.Trim();
+
+        if (trimmed.EndsWith("%", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!double.TryParse(trimmed.AsSpan(0, trimmed.Length - 1), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var percent))
+                return false;
+
+            width = availableWidth * (Math.Clamp(percent, 0, 100) / 100.0);
+        }
+        else if (!double.TryParse(trimmed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pixels))
+        {
+            return false;
+        }
+        else
+        {
+            width = Math.Min(Math.Max(pixels, 0), availableWidth);
+        }
+
+        return width > 0;
     }
 
     /// <summary>

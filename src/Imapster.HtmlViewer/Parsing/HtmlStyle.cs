@@ -236,3 +236,22 @@ public enum TextDecoration
     LineThrough,
     Blink
 }
+
+/// <summary>
+/// Helpers for the CSS 'display' property.
+/// </summary>
+public static class Display
+{
+    /// <summary>
+    /// Checks whether the given display value hides the element (display: none).
+    /// Optional '!' and 'important' suffixes (e.g. 'none !important') are ignored.
+    /// </summary>
+    public static bool IsNone(string? display)
+    {
+        if (string.IsNullOrWhiteSpace(display))
+            return false;
+
+        var value = display.Split(new[] { ' ', '!', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        return value is not null && value.Equals("none", StringComparison.OrdinalIgnoreCase);
+    }
+}
