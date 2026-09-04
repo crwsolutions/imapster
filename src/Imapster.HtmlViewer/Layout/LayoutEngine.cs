@@ -201,6 +201,21 @@ public sealed class LayoutEngine
             layoutNode.Height = brMetrics.LineHeight;
             layoutNode.Width = 0;
         }
+        else if (layoutNode.LayoutType == LayoutType.None && layoutNode.Children.Count > 0)
+        {
+            // Unknown/deprecated elements (e.g. the legacy <font> wrapper used by many
+            // emails) have no explicit layout type. Without this their content is never
+            // laid out or rendered. Mirror CSS blockification: treat the element as a
+            // block when it contains block-level children, otherwise as inline.
+            layoutNode.LayoutType = layoutNode.Children.Any(c => c.LayoutType == LayoutType.Block)
+                ? LayoutType.Block
+                : LayoutType.Inline;
+
+            if (layoutNode.LayoutType == LayoutType.Block)
+                LayoutBlockNode(layoutNode, availableWidth);
+            else
+                LayoutInlineNode(layoutNode, availableWidth);
+        }
 
         return layoutNode;
     }
@@ -339,6 +354,11 @@ public sealed class LayoutEngine
     /// </summary>
     private void LayoutBlockNode(LayoutNode node, double availableWidth)
     {
+        // This method may run several times for the same node (once per ancestor's
+        // ConvertHtmlNode pass); reset any previously computed line boxes so the latest
+        // pass wins instead of the runs accumulating.
+        node.LineBoxes.Clear();
+
         // Clamp fixed widths to the containing block so nested fixed-width tables
         // (common in marketing emails) never overflow their parent cell.
         if (node.WidthSet && node.Width > availableWidth)
@@ -352,28 +372,55 @@ public sealed class LayoutEngine
         node.Width = contentWidth;
         node.ContentWidth = innerWidth;
 
-        // Separate block children from inline children
-        var blockChildren = new List<LayoutNode>();
-        var inlineChildren = new List<LayoutNode>();
+        // Lay out the children in document order. Block children are laid out as they are
+        // encountered; consecutive inline children are grouped into runs so that inline
+        // content placed after a block (e.g. the closing text after the last paragraph of a
+        // legacy <font>-wrapped email) is positioned below that block instead of at the
+        // top of the container.
+        var totalHeight = 0.0;
+        var currentY = 0.0;
+        var inlineRun = new List<LayoutNode>();
+
+        void FinishInlineRun(double y)
+        {
+            if (inlineRun.Count == 0)
+                return;
+
+            // Collect all inline content (text and inline elements) to create unified line breaking
+            var inlineContent = CollectInlineContent(inlineRun);
+
+            if (inlineContent.HasContent)
+            {
+                // Create line boxes that wrap all inline content together. Style spans (and the
+                // line height/baseline) are built from the source node of each character.
+                var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth, inlineRun);
+
+                // Distribute inline elements across lines based on text positions
+                LayoutInlineChildrenOnLines(inlineRun, lines, inlineContent, node);
+
+                // Render the run's lines at its document position
+                foreach (var line in lines)
+                    line.Y += y;
+
+                node.LineBoxes.AddRange(lines);
+
+                totalHeight += lines.Sum(l => l.Height);
+            }
+
+            inlineRun.Clear();
+        }
 
         foreach (var child in node.Children)
         {
-            if (child.LayoutType == LayoutType.Block)
+            if (child.LayoutType != LayoutType.Block)
             {
-                blockChildren.Add(child);
+                inlineRun.Add(child);
+                continue;
             }
-            else
-            {
-                inlineChildren.Add(child);
-            }
-        }
 
-        // Layout block children first
-        double totalHeight = 0;
-        double currentY = 0;
+            // A block child ends the current inline run
+            FinishInlineRun(currentY);
 
-        foreach (var child in blockChildren)
-        {
             // Special handling for table rows - layout cells horizontally
             if (child.HtmlNode?.Type == HtmlElementType.TableRow)
             {
@@ -391,35 +438,8 @@ public sealed class LayoutEngine
             totalHeight += child.Height + child.MarginTop + child.MarginBottom;
         }
 
-        // Handle inline children - they flow horizontally within lines
-        if (inlineChildren.Count > 0)
-        {
-            // Collect all inline content (text and inline elements) to create unified line breaking
-            var inlineContent = CollectInlineContent(inlineChildren);
-
-            if (!inlineContent.HasContent)
-            {
-                // No text content in inline children
-                currentY += 0;
-                totalHeight += 0;
-            }
-            else
-            {
-                // Create line boxes that wrap all inline content together. Style spans (and the
-                // line height/baseline) are built from the source node of each character.
-                var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth, inlineChildren);
-
-                // Distribute inline elements across lines based on text positions
-                LayoutInlineChildrenOnLines(inlineChildren, lines, inlineContent, node);
-
-                // Always set node.LineBoxes for rendering, but children also have their own
-                node.LineBoxes = lines;
-
-                var inlineHeight = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
-                currentY += inlineHeight;
-                totalHeight += inlineHeight;
-            }
-        }
+        // Inline run left over at the end of the node
+        FinishInlineRun(currentY);
 
         node.ContentHeight = totalHeight;
         // Height is the border-box: content plus padding, so that borders and the

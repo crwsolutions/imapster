@@ -64,6 +64,7 @@ public sealed partial class HtmlParser
         ParseInlineStyles(element, node.Style, node.Type);
         ParseAttributes(element, node);
         ParseDeprecatedAttributes(element, node.Style);
+        ParseFontAttributes(element, node);
 
         // Check if this is a preformatted element
         var isCurrentPreformatted = isPreformatted || node.Type == HtmlElementType.Pre;
@@ -403,6 +404,63 @@ public sealed partial class HtmlParser
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Parses deprecated &lt;font&gt; element attributes (face, size, color) into CSS styles.
+    /// Many emails wrap their body in &lt;font face="..." size="2" color="#000000"&gt;;
+    /// without this the element's styling is lost and, depending on the layout, its content
+    /// is dropped entirely. Only applied when the property was not explicitly set via a
+    /// style attribute.
+    /// </summary>
+    private static void ParseFontAttributes(IHtmlElement element, HtmlNode node)
+    {
+        if (!element.TagName.Equals("font", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var style = node.Style;
+
+        var face = element.GetAttribute("face");
+        if (!string.IsNullOrWhiteSpace(face) && style.FontFamily is null)
+            style.FontFamily = face.Trim().Trim('"', '\'');
+
+        var color = element.GetAttribute("color");
+        if (!string.IsNullOrWhiteSpace(color) && style.Color is null)
+            style.Color = color.ConvertColorToHex();
+
+        var size = element.GetAttribute("size");
+        if (TryParseFontSize(size, out var fontSize))
+            style.FontSize = fontSize;
+    }
+
+    /// <summary>
+    /// Maps the legacy &lt;font size&gt; attribute (1-7) to a pixel font size, using the
+    /// browser default sizes (1-2 = ~10px, 3 = ~12px, 4 = ~14px, 5 = ~18px, 6 = ~24px,
+    /// 7 = ~36px). Values outside 1-7 are ignored.
+    /// </summary>
+    private static bool TryParseFontSize(string? size, out double fontSize)
+    {
+        fontSize = 0;
+
+        if (string.IsNullOrWhiteSpace(size) || !int.TryParse(size, out var value))
+            return false;
+
+        if (value is < 1 or > 7)
+            return false;
+
+        fontSize = value switch
+        {
+            1 => 10,
+            2 => 10,
+            3 => 12,
+            4 => 14,
+            5 => 18,
+            6 => 24,
+            7 => 36,
+            _ => 14
+        };
+
+        return true;
     }
 
     private HtmlElementType MapElementType(string tagName) => tagName.ToLowerInvariant() switch
