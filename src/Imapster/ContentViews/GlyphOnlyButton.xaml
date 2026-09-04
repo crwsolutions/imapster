@@ -12,7 +12,9 @@
         Stroke="{Binding BorderColor, Source={x:Reference Name=ThisContentView}}"
         BackgroundColor="{Binding ButtonColor, Source={x:Reference Name=ThisContentView}}">
     <cv:ImapsterMaterialButton RippleColor="{Binding RippleColor, Source={x:Reference Name=ThisContentView}}"
-                           Command="{Binding Command, Source={x:Reference Name=ThisContentView}}" Clicked="MaterialButton_Clicked" >
+                               Command="{Binding Command, Source={x:Reference Name=ThisContentView}}"
+                               CommandParameter="{Binding CommandParameter, Source={x:Reference Name=ThisContentView}}"
+                               Clicked="MaterialButton_Clicked" >
         <Label FontFamily="{Binding FontFamily, Source={x:Reference Name=ThisContentView}}"
                VerticalTextAlignment="Center" HorizontalOptions="Center"
                FontAttributes="{Binding FontAttributes, Source={x:Reference Name=ThisContentView}}"

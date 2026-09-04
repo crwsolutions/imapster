@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:b="clr-namespace:Imapster.Behaviors"
              xmlns:vm="clr-namespace:Imapster.ViewModels"
              xmlns:local="clr-namespace:Imapster.ContentViews"
              xmlns:viewer="clr-namespace:Imapster.HtmlViewer.Rendering;assembly=Imapster.HtmlViewer"
@@ -34,11 +35,19 @@
                         </Border>
                     </Grid>
 
-                    <Grid x:Name="FromToDetailsGrid" IsVisible="False" ColumnDefinitions="80, auto, auto" RowDefinitions="auto,auto" RowSpacing="8" Grid.Row="1">
+                    <Grid x:Name="FromToDetailsGrid" IsVisible="False" ColumnDefinitions="80, *, auto" RowDefinitions="auto,auto" RowSpacing="8" Grid.Row="1">
                         <Label Grid.Row="0" Text="From:" Margin="0,4,0,0" />
-                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Source={x:Reference ThisView}, Path=Email.From}" FontAttributes="Bold" Margin="5,4,0,0" TextColor="{StaticResource Secondary}" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Source={x:Reference ThisView}, Path=Email.From}" FontAttributes="Bold" Margin="5,4,0,0" TextColor="{StaticResource Secondary}" LineBreakMode="TailTruncation" />
+                        <local:GlyphOnlyButton Grid.Row="0" Grid.Column="2" Glyph="&#xf0c5;" TextColor="{StaticResource Secondary}" ButtonColor="Transparent"
+                            Command="{Binding Source={x:Reference ThisView}, Path=Email.CopyAddressCommand}"
+                            CommandParameter="From" b:CursorBehavior.Cursor="Hand"
+                            WidthRequest="28" HeightRequest="28" Margin="8,0,0,0" />
                         <Label Grid.Row="1" Text="To:" Margin="0,4,0,0" />
                         <Label Grid.Row="1" Grid.Column="1" Text="{Binding Source={x:Reference ThisView}, Path=Email.To}" Margin="5,4,0,0" />
+                        <local:GlyphOnlyButton Grid.Row="1" Grid.Column="2" Glyph="&#xf0c5;" TextColor="{StaticResource Secondary}" ButtonColor="Transparent"
+                            Command="{Binding Source={x:Reference ThisView}, Path=Email.CopyAddressCommand}"
+                            CommandParameter="To" b:CursorBehavior.Cursor="Hand"
+                            WidthRequest="28" HeightRequest="28" Margin="8,0,0,0" />
                     </Grid>
                     <Button Grid.Column="1" x:Name="ToggleFromButton" Text="Gegevens" Clicked="ToggleFromButtonClicked" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="14" WidthRequest="100" HeightRequest="28" Margin="8,0,0,0" />
 

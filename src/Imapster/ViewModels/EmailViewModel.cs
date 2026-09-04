@@ -313,6 +313,18 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     }
 
     [RelayCommand]
+    private async Task CopyAddressAsync(string address)
+    {
+        var text = address == "To" ? To : From;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        await Clipboard.SetTextAsync(text);
+    }
+
+    [RelayCommand]
     private async Task ReFetchEmailAsync()
     {
         var main = App.Services.GetRequiredService<MainViewModel>();
