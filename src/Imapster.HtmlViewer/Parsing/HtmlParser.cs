@@ -163,7 +163,7 @@ public sealed partial class HtmlParser
             if (parts.Length != 2) continue;
 
             var propertyName = parts[0].Trim().ToLowerInvariant();
-            var propertyValue = parts[1].Trim();
+            var propertyValue = StripImportant(parts[1].Trim());
 
             switch (propertyName)
             {
@@ -353,6 +353,22 @@ public sealed partial class HtmlParser
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Removes the trailing '!important' modifier from a CSS property value.
+    /// Email HTML frequently uses inline styles such as <c>width: 480px !important</c>;
+    /// the length/color parsers only understand the plain value, so the modifier has to
+    /// be stripped first or the property is silently dropped (width 0, null color, ...).
+    /// </summary>
+    private static string StripImportant(string value)
+    {
+        var index = value.IndexOf("!", StringComparison.Ordinal);
+        if (index < 0)
+            return value;
+
+        var stripped = value.Substring(0, index).TrimEnd();
+        return string.IsNullOrEmpty(stripped) ? value : stripped;
     }
 
     /// <summary>
