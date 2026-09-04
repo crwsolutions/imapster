@@ -152,6 +152,18 @@ namespace Imapster.ContentViews
             {
                 RebuildRows();
             }
+
+            UpdateFilterAndSortIndication();
+        }
+
+        private bool HasActiveFilter => _filters.Values.Any(values => values?.Count > 0);
+        private bool HasActiveSort => !string.IsNullOrEmpty(_currentSortKey);
+
+        private void UpdateFilterAndSortIndication()
+        {
+            // Toolbar buttons are only enabled when something is active
+            ClearSortButton.IsEnabled = HasActiveSort;
+            ClearFilterButton.IsEnabled = HasActiveFilter;
         }
 
         private IEnumerable<IDataGridItem> ApplyFilters(IEnumerable<IDataGridItem> source)
@@ -575,6 +587,7 @@ namespace Imapster.ContentViews
             _filters = state.Filters ?? new Dictionary<string, List<object?>>();
 
             RefreshData();
+            UpdateFilterAndSortIndication();
         }
 
         // Multi-select functionality

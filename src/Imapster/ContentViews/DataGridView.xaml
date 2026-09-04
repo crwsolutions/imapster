@@ -11,8 +11,8 @@
                 <HorizontalStackLayout Spacing="8" Margin="8" HorizontalOptions="End">
                     <Button Text="Clear selection" Clicked="OnClearSelectionTapped" />
                     <Button Text="Select all" Clicked="OnSelectAllTapped" />
-                    <Button Text="Clear filter" Clicked="OnClearFilterTapped" />
-                    <Button Text="Clear sort" Clicked="OnClearSortTapped" />
+                    <Button x:Name="ClearFilterButton" Text="Clear filter" Clicked="OnClearFilterTapped" IsEnabled="False" />
+                    <Button x:Name="ClearSortButton" Text="Clear sort" Clicked="OnClearSortTapped" IsEnabled="False" />
                 </HorizontalStackLayout>
             </Grid>
 
