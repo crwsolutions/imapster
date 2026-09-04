@@ -323,6 +323,10 @@ public partial class MainViewModel : BaseViewModel
 
             IsConnected = true;
             StatusText = $"Connected to {SelectedAccount.Name}";
+
+            // Recompute archive state for the currently displayed email,
+            // since the SelectedEmail instance does not change on connect.
+            SelectedEmail?.UpdateCanArchive();
         }
         catch (Exception ex)
         {
@@ -340,6 +344,9 @@ public partial class MainViewModel : BaseViewModel
         _imapSyncService.Dispose();
         IsConnected = false;
         StatusText = "Disconnected";
+
+        // Recompute archive state so the archive button disables on disconnect.
+        SelectedEmail?.UpdateCanArchive();
     }
 
     [RelayCommand]

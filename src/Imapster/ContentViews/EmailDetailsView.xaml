@@ -71,7 +71,14 @@
             <!-- attachement and AI information -->
             <VerticalStackLayout Grid.Row="2">
                 <!--<BoxView HeightRequest="1" BackgroundColor="Gray" Margin="0,10,0,10" />-->
-                <Label Text="Attachments:" FontAttributes="Bold" Margin="0,5,0,8" />
+                <Grid ColumnDefinitions="*, auto" VerticalOptions="Center" Margin="0,5,0,8">
+                    <Label Text="Attachments:" FontAttributes="Bold" />
+                    <Button Grid.Column="1" Text="Archive all" 
+                            Command="{Binding Source={x:Reference ThisView}, Path=Email.ArchiveAllAttachmentsCommand}"
+                            IsEnabled="{Binding Source={x:Reference ThisView}, Path=Email.CanArchiveAll}"
+                            WidthRequest="110"
+                            HeightRequest="30" />
+                </Grid>
                 <CollectionView ItemsSource="{Binding Source={x:Reference ThisView}, Path=Email.AttachmentList, Mode=OneWay}" Margin="0,0,0,10">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:AttachmentViewModel">
@@ -81,11 +88,13 @@
                                     <Button Text="Archive" Grid.Column="1" 
                                             Command="{Binding Source={x:Reference ThisView}, Path=Email.ArchiveAttachmentCommand}"
                                             CommandParameter="{Binding .}"
+                                            IsEnabled="{Binding Source={x:Reference ThisView}, Path=Email.CanArchiveAll}"
                                             WidthRequest="80"
                                             HeightRequest="30" />
                                     <Button Text="Open" Grid.Column="2" 
                                             Command="{Binding Source={x:Reference ThisView}, Path=Email.OpenAttachmentCommand}"
                                             CommandParameter="{Binding .}"
+                                            IsEnabled="{Binding Source={x:Reference ThisView}, Path=Email.CanArchiveAll}"
                                             WidthRequest="80"
                                             HeightRequest="30" />
                                 </Grid>

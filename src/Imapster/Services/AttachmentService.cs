@@ -7,7 +7,10 @@ public interface IAttachmentService
 {
     Task<string> ArchiveAttachmentAsync(int accountId, string folderId, uint emailId, string attachmentName);
     Task<string> OpenAttachmentAsync(int accountId, string folderId, uint emailId, string attachmentName);
+    Task<ArchiveAllAttachmentsResult> ArchiveAllAttachmentsAsync(int accountId, string folderId, uint emailId);
 }
+
+public record ArchiveAllAttachmentsResult(int ArchivedCount, int TotalCount, string ArchivePath, IReadOnlyList<string> FailedNames);
 
 public class AttachmentService : IAttachmentService
 {
@@ -52,6 +55,56 @@ public class AttachmentService : IAttachmentService
         await DownloadAttachmentToPathAsync(message, attachmentName, fullPath);
 
         return fullPath;
+    }
+
+    /// <summary>
+    /// Archives all attachments of an email to the account archive path.
+    /// </summary>
+    public async Task<ArchiveAllAttachmentsResult> ArchiveAllAttachmentsAsync(int accountId, string folderId, uint emailId)
+    {
+        var account = await _accountRepository.GetAccountByIdAsync(accountId);
+        if (account == null || string.IsNullOrWhiteSpace(account.AttachmentArchivePath))
+            throw new InvalidOperationException("Archive path not configured for this account");
+
+        var message = await _imapSyncService.GetMessageAsync(accountId, folderId, emailId);
+
+        var attachments = message.Attachments
+            .Select(a => a.ContentDisposition?.FileName ?? a.ContentType?.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .Distinct()
+            .ToList();
+
+        // Create path structure: mainPath/year
+        var yearPath = Path.Combine(account.AttachmentArchivePath, message.Date.DateTime.Year.ToString());
+        Directory.CreateDirectory(yearPath);
+
+        var from = message.From?.FirstOrDefault();
+        var fromAddress = from switch
+        {
+            MailboxAddress mb => mb.Address,
+            GroupAddress g => g.Name,
+            _ => "unknown"
+        };
+
+        var failedNames = new List<string>();
+        var archivedCount = 0;
+
+        foreach (var attachmentName in attachments)
+        {
+            try
+            {
+                var fullPath = Path.Combine(yearPath, $"{fromAddress}_{SanitizeFileName(attachmentName)}");
+                await DownloadAttachmentToPathAsync(message, attachmentName, fullPath);
+                archivedCount++;
+            }
+            catch (Exception)
+            {
+                failedNames.Add(attachmentName);
+            }
+        }
+
+        return new ArchiveAllAttachmentsResult(archivedCount, attachments.Count, yearPath, failedNames);
     }
 
     /// <summary>

@@ -80,6 +80,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAttachments))]
     [NotifyPropertyChangedFor(nameof(AttachmentList))]
+    [NotifyPropertyChangedFor(nameof(CanArchiveAll))]
     public partial string? Attachments { get; set; }
 
     public bool HasAttachments => !string.IsNullOrWhiteSpace(Attachments);
@@ -112,7 +113,10 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public string FormattedSize => Size is null ? "-" : Size.Value.FormatSize();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanArchiveAll))]
     public partial bool CanArchive { get; set; }
+
+    public bool CanArchiveAll => CanArchive && HasAttachments;
 
     public static EmailViewModel FromMessage(MimeMessage message, UniqueId id, string folderId, int accountId, uint? size, MessageFlags? flags)
     {
@@ -225,6 +229,38 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
                 "Error",
                 $"Failed to archive attachment: {ex.Message}",
                 "OK");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ArchiveAllAttachmentsAsync()
+    {
+        if (!CanArchiveAll)
+        {
+            return;
+        }
+
+        var main = App.Services.GetRequiredService<MainViewModel>();
+
+        try
+        {
+            _attachmentService ??= App.Services.GetRequiredService<IAttachmentService>();
+            main.IsBusy = true;
+            main.StatusText = "Archiving attachments...";
+
+            var result = await _attachmentService.ArchiveAllAttachmentsAsync(AccountId, FolderId, Id);
+
+            main.StatusText = result.FailedNames.Count == 0
+                ? $"Exported {result.ArchivedCount} of {result.TotalCount} attachments to {result.ArchivePath}"
+                : $"Exported {result.ArchivedCount} of {result.TotalCount} attachments to {result.ArchivePath}. Failed: {string.Join(", ", result.FailedNames)}";
+        }
+        catch (Exception ex)
+        {
+            main.StatusText = $"Failed to archive attachments: {ex.Message}";
+        }
+        finally
+        {
+            main.IsBusy = false;
         }
     }
 
