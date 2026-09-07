@@ -181,9 +181,8 @@ namespace Imapster.ContentViews
 
                 var allowedValues = new HashSet<string>(
                     filter.Value
-                        .Where(v => v is not null)
-                        .Select(v => v!.ToString())
-                        .Where(value => !string.IsNullOrEmpty(value)),
+                        .Where(static v => v is not null && v.ToString() is { } s && !string.IsNullOrEmpty(s))
+                        .Select(static v => v!.ToString()!),
                     StringComparer.OrdinalIgnoreCase);
 
                 if (allowedValues.Count == 0)
