@@ -244,8 +244,7 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddAccount()
     {
-        var popup = new AddAccountPopup(_folderPicker);
-        var result = await Shell.Current.ShowPopupAsync<bool>(popup);
+        var result = await _popupService.ShowPopupAsync<AddAccountPopup, bool>(Shell.Current);
 
         if (result.Result is true)
         {
@@ -270,8 +269,9 @@ public partial class MainViewModel : BaseViewModel
             return;
         }
 
-        var popup = new EditAccountPopup(SelectedAccount, _folderPicker);
-        var result = await Shell.Current.ShowPopupAsync<bool>(popup);
+        var result = await _popupService.ShowPopupAsync<EditAccountPopup, bool>(
+            Shell.Current,
+            shellParameters: new Dictionary<string, object> { { "account", SelectedAccount } });
 
         if (result.Result is true)
         {
@@ -366,12 +366,12 @@ public partial class MainViewModel : BaseViewModel
 
         StatusText = "Connecting to AI...";
 
-        // Show cancel popup
-        var popup = new CancelAiPopup(_aiCancellationTokenSource);
-        Application.Current!.Windows[0].Page!.ShowPopup(popup, new PopupOptions
-        {
-            CanBeDismissedByTappingOutsideOfPopup = false
-        });
+        // Show cancel popup (fire-and-forget: stays open while the work runs,
+        // and is closed via Shell.Current.ClosePopupAsync() below).
+        _popupService.ShowPopup<CancelAiViewModel>(
+            Shell.Current,
+            options: new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = false },
+            shellParameters: new Dictionary<string, object> { { "cts", _aiCancellationTokenSource } });
 
         int i = 0;
         // Use DisplayedItems to only process visible emails
@@ -426,7 +426,7 @@ public partial class MainViewModel : BaseViewModel
         {
             IsBusy = false;
             // Close the popup
-            await popup.CloseAsync(false);
+            await Shell.Current.ClosePopupAsync();
         }
 
         if (selectedEmails.Any())

@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
              xmlns:vm="clr-namespace:Imapster.ViewModels"
-             x:DataType="vm:ImapAccountViewModel"
+             x:DataType="vm:AccountEditorViewModel"
              x:TypeArguments="x:Boolean"
              x:Class="Imapster.Popups.EditAccountPopup"
              Background="Black" WidthRequest="600">
@@ -13,27 +13,27 @@
             
             <Grid ColumnDefinitions="Auto, *" RowDefinitions="auto, auto, auto, auto, auto, auto, auto, auto" RowSpacing="10">
                 <Label Text="Name:" Grid.Column="0" Grid.Row="0" VerticalOptions="Center" />
-                <Entry Text="{Binding Name}" Grid.Column="1" Grid.Row="0" />
+                <Entry Text="{Binding Account.Name}" Grid.Column="1" Grid.Row="0" />
                 
                 <Label Text="Server:" Grid.Column="0" Grid.Row="1" VerticalOptions="Center" />
-                <Entry Text="{Binding Server}" Grid.Column="1" Grid.Row="1" />
+                <Entry Text="{Binding Account.Server}" Grid.Column="1" Grid.Row="1" />
                 
                 <Label Text="Port:" Grid.Column="0" Grid.Row="2" VerticalOptions="Center" />
-                <Entry Text="{Binding Port}" Grid.Column="1" Grid.Row="2" Keyboard="Numeric" />
+                <Entry Text="{Binding Account.Port}" Grid.Column="1" Grid.Row="2" Keyboard="Numeric" />
                 
                 <Label Text="Use SSL:" Grid.Column="0" Grid.Row="3" VerticalOptions="Center" />
-                <Switch IsToggled="{Binding UseSsl}" Grid.Column="1" Grid.Row="3" HorizontalOptions="Start" />
+                <Switch IsToggled="{Binding Account.UseSsl}" Grid.Column="1" Grid.Row="3" HorizontalOptions="Start" />
                 
                 <Label Text="Username:" Grid.Column="0" Grid.Row="4" VerticalOptions="Center" />
-                <Entry Text="{Binding Username}" Grid.Column="1" Grid.Row="4" />
+                <Entry Text="{Binding Account.Username}" Grid.Column="1" Grid.Row="4" />
                 
                 <Label Text="Password:" Grid.Column="0" Grid.Row="5" VerticalOptions="Center" />
-                <Entry Text="{Binding Password}" Grid.Column="1" Grid.Row="5" IsPassword="True" />
+                <Entry Text="{Binding Account.Password}" Grid.Column="1" Grid.Row="5" IsPassword="True" />
                 
                 <Label Text="Archive Path:" Grid.Column="0" Grid.Row="6" VerticalOptions="Center" />
                 <HorizontalStackLayout Grid.Column="1" Grid.Row="6" Spacing="5">
-                    <Entry Text="{Binding AttachmentArchivePath}" IsEnabled="False" />
-                    <Button Text="Browse" Clicked="OnBrowseClicked" WidthRequest="80" />
+                    <Entry Text="{Binding Account.AttachmentArchivePath}" IsEnabled="False" />
+                    <Button Text="Browse" Command="{Binding BrowseCommand}" WidthRequest="80" />
                 </HorizontalStackLayout>
             </Grid>
             

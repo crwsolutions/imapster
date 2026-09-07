@@ -1,18 +1,12 @@
+using CommunityToolkit.Maui.Views;
+
 namespace Imapster.Popups;
 
-public partial class CancelAiPopup
+public partial class CancelAiPopup : Popup
 {
-    private readonly CancellationTokenSource _cts;
-
-    public CancelAiPopup(CancellationTokenSource cts)
+    public CancelAiPopup(CancelAiViewModel viewModel)
     {
-        _cts = cts;
         InitializeComponent();
-    }
-
-    private async void OnCancelClicked(object? sender, EventArgs e)
-    {
-        _cts.Cancel();
-
+        BindingContext = viewModel;
     }
 }

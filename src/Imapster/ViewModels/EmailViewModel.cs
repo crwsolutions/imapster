@@ -281,12 +281,13 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
 
         _cancellationTokenSource = new CancellationTokenSource();
 
-        // Show cancel popup
-        var popup = new CancelAiPopup(_cancellationTokenSource);
-        Application.Current!.Windows[0].Page!.ShowPopup(popup, new PopupOptions
-        {
-            CanBeDismissedByTappingOutsideOfPopup = false
-        });
+        // Show cancel popup (fire-and-forget: stays open while the work runs,
+        // and is closed via Shell.Current.ClosePopupAsync() below).
+        var popupService = App.Services.GetRequiredService<IPopupService>();
+        popupService.ShowPopup<CancelAiViewModel>(
+            Shell.Current,
+            options: new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = false },
+            shellParameters: new Dictionary<string, object> { { "cts", _cancellationTokenSource } });
 
         try
         {
@@ -313,7 +314,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
         finally
         {
             main.IsBusy = false;
-            await popup.CloseAsync(false);
+            await Shell.Current.ClosePopupAsync();
         }
     }
 
