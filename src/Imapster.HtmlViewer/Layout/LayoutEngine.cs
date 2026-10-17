@@ -9,9 +9,15 @@ namespace Imapster.HtmlViewer.Layout;
 /// </summary>
 public sealed class LayoutEngine
 {
+    /// <summary>
+    /// Key identifying a unique font style for caching purposes.
+    /// </summary>
+    private readonly record struct FontStyleKey(string Family, SKFontStyleWeight Weight, SKFontStyleSlant Slant);
+
     private readonly SKTypeface _defaultTypeface;
     private readonly double _defaultFontSize;
     private readonly string _defaultFontFamily;
+    private readonly Dictionary<FontStyleKey, SKTypeface> _typefaceCache = new();
 
     // Default margins for block elements (in em units, relative to font size)
     private const double DefaultParagraphMargin = 1.0;
@@ -29,16 +35,15 @@ public sealed class LayoutEngine
     /// vertical center of the line. Falls back to fontSize * 1.2 / fontSize * 0.8 when the
     /// typeface metrics are unusable (e.g. ascent <= 0).
     /// </summary>
-    private static (double Ascent, double Descent, double Baseline, double LineHeight) GetLineMetrics(double fontSize, string? fontFamily, bool fontBold, bool fontItalic)
+    private (double Ascent, double Descent, double Baseline, double LineHeight) GetLineMetrics(double fontSize, string? fontFamily, bool fontBold, bool fontItalic)
     {
         if (fontSize <= 0)
             return (0, 0, 0, 0);
 
-        var typeface = SKTypeface.FromFamilyName(
-            fontFamily,
+        var typeface = GetOrCreateTypeface(fontFamily ?? _defaultFontFamily,
             fontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-            SKFontStyleWidth.Normal,
             fontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+
         using var font = new SKFont(typeface) { Size = (float)fontSize };
 
         var metrics = font.Metrics;
@@ -74,6 +79,18 @@ public sealed class LayoutEngine
         _defaultFontSize = defaultFontSize;
         _defaultFontFamily = defaultFontFamily;
         _defaultTypeface = SKTypeface.FromFamilyName(defaultFontFamily, SKFontStyleWeight.Normal, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+    }
+
+    /// <summary>
+    /// Disposes of the typeface cache.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var typeface in _typefaceCache.Values)
+        {
+            typeface.Dispose();
+        }
+        _typefaceCache.Clear();
     }
 
     /// <summary>
@@ -875,13 +892,26 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
+    /// Gets or creates a typeface for the given font style, caching it to avoid repeated lookups.
+    /// </summary>
+    private SKTypeface GetOrCreateTypeface(string family, SKFontStyleWeight weight, SKFontStyleSlant slant)
+    {
+        var key = new FontStyleKey(family, weight, slant);
+        if (!_typefaceCache.TryGetValue(key, out var typeface))
+        {
+            typeface = SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant);
+            _typefaceCache[key] = typeface;
+        }
+        return typeface;
+    }
+
+    /// <summary>
     /// Measures the width of text using the specified font.
     /// </summary>
     private double MeasureText(string text, LayoutNode node)
     {
-        var typeface = SKTypeface.FromFamilyName(node.FontFamily ?? _defaultFontFamily,
+        var typeface = GetOrCreateTypeface(node.FontFamily ?? _defaultFontFamily,
             node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-            SKFontStyleWidth.Normal,
             node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
         using var font = new SKFont(typeface) { Size = (float)node.FontSize };
         return font.MeasureText(text);

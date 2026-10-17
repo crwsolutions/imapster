@@ -16,6 +16,12 @@ public partial class HtmlViewer : SKCanvasView
     private HtmlNode? _htmlRoot;
     private double _lastMeasuredWidth = -1;
     private double _lastRenderedWidth = -1;
+    private readonly Dictionary<FontStyleKey, SKTypeface> _typefaceCache = new();
+
+    /// <summary>
+    /// Key identifying a unique font style for caching purposes.
+    /// </summary>
+    private readonly record struct FontStyleKey(string Family, SKFontStyleWeight Weight, SKFontStyleSlant Slant);
 
     public static readonly BindableProperty HtmlProperty = BindableProperty.Create(
         nameof(Html),
@@ -492,6 +498,20 @@ public partial class HtmlViewer : SKCanvasView
     }
 
     /// <summary>
+    /// Gets or creates a typeface for the given font style, caching it to avoid repeated lookups.
+    /// </summary>
+    private SKTypeface GetOrCreateTypeface(string family, SKFontStyleWeight weight, SKFontStyleSlant slant)
+    {
+        var key = new FontStyleKey(family, weight, slant);
+        if (!_typefaceCache.TryGetValue(key, out var typeface))
+        {
+            typeface = SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant);
+            _typefaceCache[key] = typeface;
+        }
+        return typeface;
+    }
+
+    /// <summary>
     /// Creates a Skia font for a layout node (family, weight, slant, size).
     /// </summary>
     private SKFont CreateNodeFont(LayoutNode node)
@@ -499,7 +519,7 @@ public partial class HtmlViewer : SKCanvasView
         var fontFamily = node.FontFamily ?? _renderContext.FontFamily;
         var fontWeight = node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
         var fontSlant = node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-        var typeface = SKTypeface.FromFamilyName(fontFamily, fontWeight, SKFontStyleWidth.Normal, fontSlant);
+        var typeface = GetOrCreateTypeface(fontFamily, fontWeight, fontSlant);
         return new SKFont(typeface) { Size = (float)node.FontSize };
     }
 

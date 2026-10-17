@@ -74,13 +74,7 @@ namespace Imapster.ContentViews
 
         public static readonly BindableProperty SelectedItemProperty =
             BindableProperty.Create(nameof(SelectedItem), typeof(object), typeof(DataGridView),
-                null, BindingMode.TwoWay, propertyChanged: OnSelectedItemChanged);
-
-        private static void OnSelectedItemChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            // This is called when the bound SelectedEmail property changes externally
-            // We don't need to do anything here as the selection is already handled
-        }
+                null, BindingMode.TwoWay);
 
         public DataGridView()
         {
