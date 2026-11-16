@@ -2,7 +2,7 @@ namespace Imapster.Extensions;
 
 internal static class FormatExtensions
 {
-    internal static string FormatSize(this uint bytes)
+    internal static string FormatSize(this long bytes)
     {
         const double KB = 1024;
         const double MB = KB * 1024;

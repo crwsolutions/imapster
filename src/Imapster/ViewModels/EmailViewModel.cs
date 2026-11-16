@@ -75,7 +75,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
     public partial int AccountId { get; set; }
 
     [ObservableProperty]
-    public partial uint? Size { get; set; }
+    public partial long? Size { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAttachments))]
@@ -118,7 +118,7 @@ public partial class EmailViewModel : ObservableObject, IDataGridItem, IEquatabl
 
     public bool CanArchiveAll => CanArchive && HasAttachments;
 
-    public static EmailViewModel FromMessage(MimeMessage message, UniqueId id, string folderId, int accountId, uint? size, MessageFlags? flags)
+    public static EmailViewModel FromMessage(MimeMessage message, UniqueId id, string folderId, int accountId, long? size, MessageFlags? flags)
     {
         var attachments = message.Attachments
             .OfType<MimeEntity>()

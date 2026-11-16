@@ -72,13 +72,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.7.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.80" />
-		<PackageReference Include="MailKit" Version="4.17.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.130" />
+		<PackageReference Include="MailKit" Version="5.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.9" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
 		<PackageReference Include="CommunityToolkit.MVVM" Version="8.4.2" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
-		<PackageReference Include="Dapper" Version="2.1.79" />
+		<PackageReference Include="Dapper" Version="2.1.89" />
 		<PackageReference Include="OllamaSharp" Version="5.4.25" />
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.7.0" />
 		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
