@@ -1,0 +1,54 @@
+# Set default behaviour: normalize line endings to LF on check-in,
+# let git decide on checkout (respects core.autocrlf).
+* text=auto
+
+# Explicitly mark known binary files
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.svg    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.mp3    binary
+*.mp4    binary
+*.webm   binary
+*.webp   binary
+*.zip    binary
+*.exe    binary
+*.dll    binary
+*.so     binary
+*.dylib  binary
+
+# Text files - enforce LF
+*.cs             text eol=lf
+*.csx            text eol=lf
+*.csproj         text eol=lf
+*.slnx           text eol=lf
+*.sln            text eol=lf
+*.props          text eol=lf
+*.targets        text eol=lf
+*.xaml           text eol=lf
+*.resx           text eol=lf
+*.json           text eol=lf
+*.http           text eol=lf
+*.ts             text eol=lf
+*.js             text eol=lf
+*.css            text eol=lf
+*.html           text eol=lf
+*.xml            text eol=lf
+*.md             text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+*.sh             text eol=lf
+*.editorconfig   text eol=lf
+.gitignore       text eol=lf
+.gitattributes   text eol=lf
+
+# Windows batch files must stay CRLF
+*.cmd            text eol=crlf
+*.bat            text eol=crlf

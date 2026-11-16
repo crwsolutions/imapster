@@ -1,6 +1,10 @@
 # All files in this solution
 root = true
 
+# Default line endings for all files
+text = true
+end_of_line = lf
+
 ##############################
 # General                    #
 ##############################
