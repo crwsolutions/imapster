@@ -1,13 +1,13 @@
 ﻿# Copilot Instructions for Imapster
 
 ## Project Overview
-Imapster is a .NET 10 MAUI email management application that synchronizes with IMAP servers, provides AI-powered email categorization, and enables email organization and management through a user-friendly desktop interface.
+Imapster is a .NET 11 MAUI email management application that synchronizes with IMAP servers, provides AI-powered email categorization, and enables email organization and management through a user-friendly desktop interface.
 
 ## General Guidelines
-- Target .NET 10 exclusively; do not use outdated .NET Framework or Xamarin Forms patterns.
+- Target .NET 11 exclusively; do not use outdated .NET Framework or Xamarin Forms patterns.
 - Use modern C# features (C# 12+) such as primary constructors, records, and LINQ methods.
 
-### .NET 10 MAUI API Updates
+### .NET 11 MAUI API Updates
 - **Animation Methods**: Use async versions (e.g., `FadeToAsync`) instead of obsolete synchronous methods like `FadeTo`.
 - **Application.Current.MainPage**: Obsolete. Use `Application.Current?.Windows[0].Page` instead.
 - **DisplayAlert()**: Use the async version `DisplayAlertAsync()` for non-blocking dialog operations.
@@ -193,10 +193,10 @@ public partial class EmailViewModel : ObservableObject
 - Manual testing and QA validation are the primary testing approach
 
 ## Build and Deployment
-- Build target: .NET 10
+- Build target: .NET 11
 - Project should compile without warnings
 - Use `dotnet build` or Visual Studio build functionality
-- Ensure all referenced NuGet packages are compatible with .NET 10
+- Ensure all referenced NuGet packages are compatible with .NET 11
 
 ## Common Patterns in Imapster
 
