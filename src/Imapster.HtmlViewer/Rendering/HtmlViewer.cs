@@ -596,13 +596,12 @@ public partial class HtmlViewer : SKCanvasView
             // Render text with per-span styling using StyleSpans
             if (line.StyleSpans.Count > 0)
             {
-                // Sort spans by StartIndex to ensure correct rendering order
-                var sortedSpans = line.StyleSpans.OrderBy(s => s.StartIndex).ToList();
-
+                // StyleSpans are always built in ascending StartIndex order, so they can be
+                // rendered in list order without sorting.
                 var currentX = x;
                 var textIndex = 0;
 
-                foreach (var span in sortedSpans)
+                foreach (var span in line.StyleSpans)
                 {
                     // Validate span bounds
                     if (span.StartIndex < 0 || span.StartIndex > line.Text.Length)

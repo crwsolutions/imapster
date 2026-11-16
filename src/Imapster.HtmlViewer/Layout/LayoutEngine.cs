@@ -14,10 +14,16 @@ public sealed class LayoutEngine
     /// </summary>
     private readonly record struct FontStyleKey(string Family, SKFontStyleWeight Weight, SKFontStyleSlant Slant);
 
+    /// <summary>
+    /// Key identifying a unique line metrics query for caching purposes.
+    /// </summary>
+    private readonly record struct LineMetricsKey(string Family, double FontSize, bool Bold, bool Italic);
+
     private readonly SKTypeface _defaultTypeface;
     private readonly double _defaultFontSize;
     private readonly string _defaultFontFamily;
     private readonly Dictionary<FontStyleKey, SKTypeface> _typefaceCache = new();
+    private readonly Dictionary<LineMetricsKey, (double Ascent, double Descent, double Baseline, double LineHeight)> _lineMetricsCache = new();
 
     // Default margins for block elements (in em units, relative to font size)
     private const double DefaultParagraphMargin = 1.0;
@@ -33,12 +39,17 @@ public sealed class LayoutEngine
     /// Gets the font line metrics (ascent, descent, baseline, line height) for a node's font.
     /// Line height is ascent + descent + 2 and baseline is ascent + 1, so text sits near the
     /// vertical center of the line. Falls back to fontSize * 1.2 / fontSize * 0.8 when the
-    /// typeface metrics are unusable (e.g. ascent <= 0).
+    /// typeface metrics are unusable (e.g. ascent <= 0). The result is cached per
+    /// (family, size, bold, italic) so repeated spans share a single font query.
     /// </summary>
     private (double Ascent, double Descent, double Baseline, double LineHeight) GetLineMetrics(double fontSize, string? fontFamily, bool fontBold, bool fontItalic)
     {
         if (fontSize <= 0)
             return (0, 0, 0, 0);
+
+        var key = new LineMetricsKey(fontFamily ?? _defaultFontFamily, fontSize, fontBold, fontItalic);
+        if (_lineMetricsCache.TryGetValue(key, out var cached))
+            return cached;
 
         var typeface = GetOrCreateTypeface(fontFamily ?? _defaultFontFamily,
             fontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
@@ -58,7 +69,9 @@ public sealed class LayoutEngine
 
         var lineHeight = ascent + descent + 2;
         var baseline = ascent + 1;
-        return (ascent, descent, baseline, lineHeight);
+        var result = (ascent, descent, baseline, lineHeight);
+        _lineMetricsCache[key] = result;
+        return result;
     }
 
     /// <summary>
@@ -980,33 +993,45 @@ public sealed class LayoutEngine
         return font.MeasureText(text);
     }
 
+    private double MeasureText(ReadOnlySpan<char> text, LayoutNode node)
+    {
+        var typeface = GetOrCreateTypeface(
+            node.FontFamily ?? _defaultFontFamily,
+            node.FontBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+            node.FontItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+
+        using var font = new SKFont(typeface)
+        {
+            Size = (float)node.FontSize
+        };
+
+        return font.MeasureText(text);
+    }
+
     /// <summary>
     /// Breaks a word into two parts that fit within the available width.
     /// </summary>
-    private (string prefix, string suffix) BreakWord(string word, double availableWidth, LayoutNode node)
+    private (string prefix, string suffix) BreakWord(
+        string word,
+        double availableWidth,
+        LayoutNode node)
     {
-        // Try to find a break point using hyphenation or character limits
-        // For simplicity, we'll just return the first character as prefix if the word is too wide
-        var firstChar = word.Substring(0, 1);
-        var firstCharWidth = MeasureText(firstChar, node);
-        
-        if (firstCharWidth > availableWidth)
-        {
-            // Even the first character doesn't fit - return empty prefix and full word as suffix
-            return (string.Empty, word);
-        }
+        var span = word.AsSpan();
 
-        // Binary search to find the longest prefix that fits
-        int left = 1, right = word.Length;
+        // Check if even the first character fits.
+        if (MeasureText(span[..1], node) > availableWidth)
+            return (string.Empty, word);
+
+        // Binary search for the longest prefix that fits.
+        int left = 1;
+        int right = span.Length;
         int bestFit = 1;
 
         while (left <= right)
         {
-            int mid = (left + right) / 2;
-            var wordPrefix = word.Substring(0, mid);
-            var width = MeasureText(wordPrefix, node);
+            int mid = left + (right - left) / 2;
 
-            if (width <= availableWidth)
+            if (MeasureText(span[..mid], node) <= availableWidth)
             {
                 bestFit = mid;
                 left = mid + 1;
@@ -1017,9 +1042,10 @@ public sealed class LayoutEngine
             }
         }
 
-        var prefix = word.Substring(0, bestFit);
-        var suffix = word.Substring(bestFit);
-        return (prefix, suffix);
+        return (
+            span[..bestFit].ToString(),
+            span[bestFit..].ToString()
+        );
     }
 
     /// <summary>
@@ -1223,6 +1249,8 @@ public sealed class LayoutEngine
         var currentWidth = 0.0;
         var charIndex = 0;
         var lineStartChar = 0;
+        // The space width is constant for the node's font, so measure it once instead of per word.
+        var spaceWidth = MeasureText(" ", node);
 
         // Handle newlines explicitly (from <br/> elements)
         var segments = text.Split('\n');
@@ -1236,7 +1264,6 @@ public sealed class LayoutEngine
             foreach (var word in words)
             {
                 var wordWidth = MeasureText(word, node);
-                var spaceWidth = MeasureText(" ", node);
                 var totalWidth = currentWidth + wordWidth + (currentLineText.Length > 0 ? spaceWidth : 0);
 
                 if (totalWidth <= availableWidth && currentLineText.Length > 0)
@@ -1430,148 +1457,6 @@ public sealed class LayoutEngine
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Builds style spans for parent lines to indicate which parts belong to which inline children.
-    /// This allows proper rendering of styled inline elements like links.
-    /// </summary>
-    private void BuildParentLineStyleSpans(List<LineBox> parentLines, InlineContent inlineContent, List<LayoutNode> inlineChildren)
-    {
-        // Build the combined text and track character ranges for all children
-        var combinedTextBuilder = new System.Text.StringBuilder();
-        var allRanges = new List<(int start, int end, LayoutNode child, bool isInlineElement, string text)>();
-        int charIndex = 0;
-
-        foreach (var child in inlineChildren)
-        {
-            if (child.HtmlNode?.Type == HtmlElementType.Text)
-            {
-                var text = child.HtmlNode.TextContent ?? string.Empty;
-                combinedTextBuilder.Append(text);
-                allRanges.Add((charIndex, charIndex + text.Length, child, false, text));
-                charIndex += text.Length;
-            }
-            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
-            {
-                combinedTextBuilder.Append('\n');
-                charIndex += 1;
-            }
-            else if (child.LayoutType == LayoutType.Inline)
-            {
-                // Inline element (like <a>, <strong>, etc.)
-                var text = CollectTextFromNode(child);
-                combinedTextBuilder.Append(text);
-                allRanges.Add((charIndex, charIndex + text.Length, child, true, text));
-                charIndex += text.Length;
-            }
-        }
-
-        var combinedText = combinedTextBuilder.ToString();
-
-        // For each parent line, build style spans by finding where the child text appears in the line
-        foreach (var line in parentLines)
-        {
-            line.StyleSpans.Clear();
-
-            if (line.Text == null || line.Text.Length == 0)
-                continue;
-
-            // Find the position of this line's text within the combined text
-            // The line text should be a substring of the combined text (with spaces handled)
-            int linePosInCombined = combinedText.IndexOf(line.Text);
-            
-            if (linePosInCombined == -1)
-            {
-                // Fallback: try to find the line text ignoring exact spacing
-                // This handles cases where word wrapping might have altered spacing
-                linePosInCombined = FindLinePositionInCombinedText(line.Text, combinedText, allRanges);
-            }
-
-            // For each inline element (link, strong, etc.), find where it appears in this line
-            foreach (var (rangeStart, rangeEnd, child, isInlineElement, rangeText) in allRanges)
-            {
-                if (!isInlineElement || string.IsNullOrEmpty(rangeText))
-                    continue;
-
-                // Find where this child's text appears in the line text
-                int spanStartInLine = line.Text.IndexOf(rangeText, StringComparison.Ordinal);
-                
-                if (spanStartInLine >= 0)
-                {
-                    // Found the text - add a style span for it
-                    line.StyleSpans.Add(new LineBox.InlineStyleSpan
-                    {
-                        StartIndex = spanStartInLine,
-                        Length = rangeText.Length,
-                        SourceNode = child
-                    });
-                }
-                else
-                {
-                    // Text not found exactly - might be split across lines or partial match
-                    // Try to find partial overlap
-                    int partialStart = FindPartialMatch(line.Text, rangeText, rangeStart, linePosInCombined);
-                    if (partialStart >= 0)
-                    {
-                        int partialLength = Math.Min(rangeText.Length, line.Text.Length - partialStart);
-                        line.StyleSpans.Add(new LineBox.InlineStyleSpan
-                        {
-                            StartIndex = partialStart,
-                            Length = partialLength,
-                            SourceNode = child
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Finds the position of a line within the combined text.
-    /// </summary>
-    private int FindLinePositionInCombinedText(string lineText, string combinedText, List<(int start, int end, LayoutNode child, bool isInlineElement, string text)> ranges)
-    {
-        // Try to find the line by matching the first word
-        var firstWord = lineText.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (string.IsNullOrEmpty(firstWord))
-            return -1;
-
-        int pos = combinedText.IndexOf(firstWord);
-        if (pos >= 0 && combinedText.Substring(pos, lineText.Length) == lineText)
-            return pos;
-
-        return -1;
-    }
-
-    /// <summary>
-    /// Finds a partial match of rangeText in lineText based on character positions.
-    /// </summary>
-    private int FindPartialMatch(string lineText, string rangeText, int rangeStart, int linePosInCombined)
-    {
-        if (linePosInCombined < 0)
-            return -1;
-
-        // Calculate where the range text should appear in the line
-        int expectedPos = rangeStart - linePosInCombined;
-        
-        if (expectedPos >= 0 && expectedPos < lineText.Length)
-        {
-            // Verify that the text at expectedPos matches the start of rangeText
-            int matchLength = 0;
-            while (matchLength < rangeText.Length && expectedPos + matchLength < lineText.Length)
-            {
-                if (lineText[expectedPos + matchLength] == rangeText[matchLength])
-                    matchLength++;
-                else
-                    break;
-            }
-            
-            if (matchLength > 0)
-                return expectedPos;
-        }
-
-        return -1;
     }
 
     /// <summary>
