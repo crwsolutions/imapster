@@ -9,31 +9,42 @@ public static partial class StringExtensions
     private static partial Regex ColorRegex();
 
     public static double ParseLength(this string value)
-    {
-        if (string.IsNullOrEmpty(value)) return 0;
+        => ParseLength(value.AsSpan());
 
-        value = value.Trim();
+    public static double ParseLength(this ReadOnlySpan<char> value)
+    {
+        var v = value.Trim();
+        if (v.IsEmpty) return 0;
 
         // 'rem' has to be tested before 'em': every rem value also ends with 'em', so
         // matching 'em' first slices "1.5rem" into "1.5r" and silently drops the length.
-        if (TryParseWithUnit(value, "rem", out var rem)) return rem * 16;
-        if (TryParseWithUnit(value, "em", out var em)) return em * 16;
-        if (TryParseWithUnit(value, "pt", out var pt)) return pt * 1.333;
-        if (TryParseWithUnit(value, "px", out var px)) return px;
+        if (TryParseUnit(v, "rem", out var rem)) return rem * 16;
+        if (TryParseUnit(v, "em", out var em)) return em * 16;
+        if (TryParseUnit(v, "pt", out var pt)) return pt * 1.333;
+        if (TryParseUnit(v, "px", out var px)) return px;
 
         // A percentage resolves against a containing box the parser does not know; the
         // layout engine handles those, so here it means "no explicit length".
-        if (value.EndsWith("%", StringComparison.OrdinalIgnoreCase)) return 0;
+        if (v[^1] == '%') return 0;
 
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var plainResult) ? plainResult : 0;
+        return TryParseDouble(v, out var plainResult) ? plainResult : 0;
     }
 
-    private static bool TryParseWithUnit(string value, string unit, out double number)
+    private static bool TryParseUnit(ReadOnlySpan<char> value, string unit, out double number)
     {
         number = 0;
+        if (!value.EndsWith(unit, StringComparison.OrdinalIgnoreCase))
+            return false;
 
-        return value.EndsWith(unit, StringComparison.OrdinalIgnoreCase)
-            && double.TryParse(value[..^unit.Length], NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+        return TryParseDouble(value[..^unit.Length], out number);
+    }
+
+    private static bool TryParseDouble(ReadOnlySpan<char> value, out double number)
+    {
+        number = 0;
+        if (value.IsEmpty) return false;
+
+        return double.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out number);
     }
 
     public static string? ConvertColorToHex(this string color)
@@ -42,7 +53,7 @@ public static partial class StringExtensions
 
         color = color.Trim();
 
-        if (color.StartsWith("#")) return NormalizeHex(color);
+        if (color.StartsWith('#')) return NormalizeHex(color);
 
         var rgbMatch = ColorRegex().Match(color);
         if (rgbMatch.Success)
