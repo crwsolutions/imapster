@@ -1,4 +1,5 @@
 using SkiaSharp;
+using System.Globalization;
 
 namespace Imapster.HtmlViewer.Rendering;
 
@@ -6,29 +7,8 @@ internal static class SkiaExtensions
 {
     internal static SKColor ParseColorString(this string colorString)
     {
-        if (colorString.StartsWith("#"))
-        {
-            try
-            {
-                var hex = colorString.Substring(1);
-                if (hex.Length == 6)
-                {
-                    var r = byte.Parse(hex[0..2], System.Globalization.NumberStyles.HexNumber);
-                    var g = byte.Parse(hex[2..4], System.Globalization.NumberStyles.HexNumber);
-                    var b = byte.Parse(hex[4..6], System.Globalization.NumberStyles.HexNumber);
-                    return new SKColor(r, g, b, 255);
-                }
-                if (hex.Length == 8)
-                {
-                    var r = byte.Parse(hex[0..2], System.Globalization.NumberStyles.HexNumber);
-                    var g = byte.Parse(hex[2..4], System.Globalization.NumberStyles.HexNumber);
-                    var b = byte.Parse(hex[4..6], System.Globalization.NumberStyles.HexNumber);
-                    var a = byte.Parse(hex[6..8], System.Globalization.NumberStyles.HexNumber);
-                    return new SKColor(r, g, b, a);
-                }
-            }
-            catch { }
-        }
+        if (colorString.Length > 1 && colorString[0] == '#' && TryParseHex(colorString[1..], out var hexColor))
+            return hexColor;
 
         return colorString.ToLowerInvariant() switch
         {
@@ -56,24 +36,45 @@ internal static class SkiaExtensions
 
     internal static SKColor ParseColorStringOrDefault(this string? colorString) => colorString?.ParseColorString() ?? SKColors.Transparent;
 
-    internal static SKColor ParseColorString(this Color color)
-    {
-        return new SKColor(
-            (byte)(color.Red * 255),
-            (byte)(color.Green * 255),
-            (byte)(color.Blue * 255),
-            (byte)(color.Alpha * 255)
-        );
-    }
-
-    internal static void Clear(this SKCanvas canvas, SKColor color) => canvas.Clear(color);
+    internal static SKColor ParseColorString(this Color color) => color.ToSKColor();
 
     internal static void DrawRect(this SKCanvas canvas, float x, float y, float width, float height, SKColor color)
-        => canvas.DrawRect(x, y, width, height, new SKPaint { Color = color });
+    {
+        using var paint = new SKPaint { Color = color };
+        canvas.DrawRect(x, y, width, height, paint);
+    }
 
     internal static void DrawLine(this SKCanvas canvas, float x1, float y1, float x2, float y2, SKColor color, float strokeWidth = 1)
     {
-        var paint = new SKPaint { Color = color, StrokeWidth = strokeWidth, IsAntialias = true };
+        using var paint = new SKPaint { Color = color, StrokeWidth = strokeWidth, IsAntialias = true };
         canvas.DrawLine(x1, y1, x2, y2, paint);
+    }
+
+    /// <summary>
+    /// Parses the digits of a hex color without an exception path: #RGB shorthand is
+    /// expanded, #RRGGBB and #RRGGBBAA are read directly, and anything else fails.
+    /// </summary>
+    private static bool TryParseHex(string hex, out SKColor color)
+    {
+        color = default;
+
+        if (hex.Length == 3)
+            hex = $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}";
+        else
+            hex = "#" + hex;
+
+        if (hex.Length != 7 && hex.Length != 9)
+            return false;
+
+        if (!byte.TryParse(hex[1..3], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r)) return false;
+        if (!byte.TryParse(hex[3..5], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g)) return false;
+        if (!byte.TryParse(hex[5..7], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b)) return false;
+
+        var a = (byte)255;
+        if (hex.Length == 9 && !byte.TryParse(hex[7..9], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out a))
+            return false;
+
+        color = new SKColor(r, g, b, a);
+        return true;
     }
 }

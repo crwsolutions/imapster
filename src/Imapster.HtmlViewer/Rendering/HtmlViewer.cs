@@ -14,6 +14,7 @@ public partial class HtmlViewer : SKCanvasView
     private readonly HtmlParser _htmlParser;
     private LayoutNode? _layoutRoot;
     private HtmlNode? _htmlRoot;
+    private string? _parsedHtml;
     private double _lastMeasuredWidth = -1;
     private double _lastRenderedWidth = -1;
     private readonly Dictionary<FontStyleKey, SKTypeface> _typefaceCache = new();
@@ -196,15 +197,19 @@ public partial class HtmlViewer : SKCanvasView
         {
             try
             {
-                _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
-                _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)widthConstraint);
-                _lastRenderedWidth = widthConstraint;
+                var htmlRoot = EnsureParsed();
+                if (htmlRoot is not null)
+                {
+                    _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)widthConstraint);
+                    _lastRenderedWidth = widthConstraint;
+                }
             }
             catch { }
         }
 
         var desiredHeight = GetDesiredHeight();
-        HeightRequest = desiredHeight;
+        ApplyHeightRequest(desiredHeight);
+
         return new Size(widthConstraint, desiredHeight);
     }
 
@@ -222,29 +227,57 @@ public partial class HtmlViewer : SKCanvasView
         return desiredHeight;
     }
 
-    private void ParseAndLayout()
+    /// <summary>
+    /// Returns the parse tree of the current HTML, parsing only when the HTML changed.
+    /// Parsing a full mail is expensive, so the tree is reused across measure, layout and paint.
+    /// </summary>
+    private HtmlNode? EnsureParsed()
     {
-        if (string.IsNullOrEmpty(_renderContext.HtmlContent))
+        var html = _renderContext.HtmlContent;
+
+        if (string.IsNullOrEmpty(html))
         {
             _htmlRoot = null;
-            _layoutRoot = null;
-            HeightRequest = -1;
-        }
-        else
-        {
-            _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
-            if (_lastRenderedWidth > 0)
-            {
-                _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)_lastRenderedWidth);
-            }
+            _parsedHtml = null;
+            return null;
         }
 
-        HeightRequest = GetDesiredHeight();
-        if (_layoutRoot is not null && Parent is Grid parent)
+        if (_htmlRoot is not null && _parsedHtml == html)
+            return _htmlRoot;
+
+        _htmlRoot = _htmlParser.Parse(html);
+        _parsedHtml = html;
+        return _htmlRoot;
+    }
+
+    private void ParseAndLayout()
+    {
+        var htmlRoot = EnsureParsed();
+
+        if (htmlRoot is null)
         {
-            parent.HeightRequest = HeightRequest;
+            _layoutRoot = null;
         }
+        else if (_lastRenderedWidth > 0)
+        {
+            _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)_lastRenderedWidth);
+        }
+
+        ApplyHeightRequest(GetDesiredHeight());
         InvalidateSurface();
+    }
+
+    /// <summary>
+    /// Assigning HeightRequest invalidates the measure pass, so assign it only when the height
+    /// really changed; otherwise every pass triggers the next one.
+    /// </summary>
+    private void ApplyHeightRequest(double desiredHeight)
+    {
+        if (Math.Abs(HeightRequest - desiredHeight) > 0.5)
+            HeightRequest = desiredHeight;
+
+        if (_layoutRoot is not null && Parent is Grid parent && Math.Abs(parent.HeightRequest - desiredHeight) > 0.5)
+            parent.HeightRequest = desiredHeight;
     }
 
     private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
@@ -271,12 +304,14 @@ public partial class HtmlViewer : SKCanvasView
 
         if (needsLayout && !string.IsNullOrEmpty(_renderContext.HtmlContent) && currentWidth > 0)
         {
-            _lastRenderedWidth = currentWidth;
-
             try
             {
-                _htmlRoot = _htmlParser.Parse(_renderContext.HtmlContent);
-                _layoutRoot = _layoutEngine.Layout(_htmlRoot, (float)currentWidth);
+                var htmlRoot = EnsureParsed();
+                if (htmlRoot is not null)
+                {
+                    _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)currentWidth);
+                    _lastRenderedWidth = currentWidth;
+                }
             }
             catch { }
         }
@@ -580,7 +615,7 @@ public partial class HtmlViewer : SKCanvasView
                     {
                         var gapLength = span.StartIndex - textIndex;
                         var gapText = line.Text.Substring(textIndex, gapLength);
-                        var gapPaint = new SKPaint
+                        using var gapPaint = new SKPaint
                         {
                             IsAntialias = true,
                             Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
@@ -595,7 +630,7 @@ public partial class HtmlViewer : SKCanvasView
                     var spanText = line.Text.Substring(span.StartIndex, span.Length);
                     var sourceNode = span.SourceNode ?? node;
 
-                    var paint = new SKPaint
+                    using var paint = new SKPaint
                     {
                         IsAntialias = true,
                         Color = sourceNode.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
@@ -627,7 +662,7 @@ public partial class HtmlViewer : SKCanvasView
                 if (textIndex < line.Text.Length)
                 {
                     var remainingText = line.Text.Substring(textIndex);
-                    var remainingPaint = new SKPaint
+                    using var remainingPaint = new SKPaint
                     {
                         IsAntialias = true,
                         Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
@@ -640,7 +675,7 @@ public partial class HtmlViewer : SKCanvasView
                 // No style spans - render entire line with node styling
                 var isLinkNode = node.Href is not null;
 
-                var paint = new SKPaint
+                using var paint = new SKPaint
                 {
                     IsAntialias = true,
                     Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
@@ -688,7 +723,7 @@ public partial class HtmlViewer : SKCanvasView
                         var selectionWidth = font.MeasureText(selectionText);
                         var selectionY = y - (float)(node.FontSize * 0.25f);
 
-                        var selectionPaint = new SKPaint
+                        using var selectionPaint = new SKPaint
                         {
                             IsAntialias = true,
                             Color = node.TextColor?.ParseColorString() ?? _renderContext.TextColor.ParseColorString()
@@ -708,7 +743,7 @@ public partial class HtmlViewer : SKCanvasView
         var markerY = offsetY + node.PaddingTop + node.FontSize;
 
         using var font = new SKFont(SKTypeface.Default) { Size = (float)node.FontSize };
-        var paint = new SKPaint { IsAntialias = true, Color = _renderContext.TextColor.ParseColorString() };
+        using var paint = new SKPaint { IsAntialias = true, Color = _renderContext.TextColor.ParseColorString() };
 
         var listStyle = node.ListStyleType?.ToLowerInvariant() ?? "disc";
         var markerText = listStyle switch
@@ -778,25 +813,25 @@ public partial class HtmlViewer : SKCanvasView
 
         if (node.BorderLeftWidth > 0 && node.BorderLeftColor is not null)
         {
-            var paint = new SKPaint { Color = node.BorderLeftColor.ParseColorString(), StrokeWidth = (float)node.BorderLeftWidth, IsAntialias = true };
+            using var paint = new SKPaint { Color = node.BorderLeftColor.ParseColorString(), StrokeWidth = (float)node.BorderLeftWidth, IsAntialias = true };
             canvas.DrawLine(x, y, x, y + height, paint);
         }
 
         if (node.BorderRightWidth > 0 && node.BorderRightColor is not null)
         {
-            var paint = new SKPaint { Color = node.BorderRightColor.ParseColorString(), StrokeWidth = (float)node.BorderRightWidth, IsAntialias = true };
+            using var paint = new SKPaint { Color = node.BorderRightColor.ParseColorString(), StrokeWidth = (float)node.BorderRightWidth, IsAntialias = true };
             canvas.DrawLine(x + width, y, x + width, y + height, paint);
         }
 
         if (node.BorderTopWidth > 0 && node.BorderTopColor is not null)
         {
-            var paint = new SKPaint { Color = node.BorderTopColor.ParseColorString(), StrokeWidth = (float)node.BorderTopWidth, IsAntialias = true };
+            using var paint = new SKPaint { Color = node.BorderTopColor.ParseColorString(), StrokeWidth = (float)node.BorderTopWidth, IsAntialias = true };
             canvas.DrawLine(x, y, x + width, y, paint);
         }
 
         if (node.BorderBottomWidth > 0 && node.BorderBottomColor is not null)
         {
-            var paint = new SKPaint { Color = node.BorderBottomColor.ParseColorString(), StrokeWidth = (float)node.BorderBottomWidth, IsAntialias = true };
+            using var paint = new SKPaint { Color = node.BorderBottomColor.ParseColorString(), StrokeWidth = (float)node.BorderBottomWidth, IsAntialias = true };
             canvas.DrawLine(x, y + height, x + width, y + height, paint);
         }
     }

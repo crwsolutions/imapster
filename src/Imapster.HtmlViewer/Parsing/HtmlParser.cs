@@ -9,11 +9,22 @@ public sealed partial class HtmlParser
     [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]
     private static partial Regex CommentRegex { get; }
 
+    /// <summary>
+    /// Elements whose text is document metadata instead of rendered content: CSS rules,
+    /// scripts and head metadata. AngleSharp keeps such elements inside the table they are
+    /// written in, and emails routinely place <style> blocks inside table cells, so they
+    /// cannot be filtered by looking at the head only.
+    /// </summary>
+    private static readonly HashSet<string> NonRenderedTags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "style", "script", "noscript", "template", "head", "title", "meta", "link", "base"
+    };
+
     private readonly AngleSharp.Html.Parser.HtmlParser _angleSharpParser = new();
 
     public HtmlNode Parse(string html)
     {
-        var document = _angleSharpParser.ParseDocumentAsync(html).Result;
+        var document = _angleSharpParser.ParseDocument(html);
         var root = new HtmlNode { Type = HtmlElementType.DocumentFragment, TagName = "#document-fragment" };
 
         if (document.Body != null)
@@ -44,6 +55,12 @@ public sealed partial class HtmlParser
 
     private void ParseNode(IHtmlElement element, HtmlNode parentNode, bool isPreformatted = false)
     {
+        // CSS, scripts and metadata are not document content. Without this filter a <style>
+        // block inside a table cell (very common in marketing emails) is laid out and drawn
+        // as plain text, so its rules end up visible in the rendered email.
+        if (NonRenderedTags.Contains(element.TagName))
+            return;
+
         // Elements with display: none (e.g. email "preheader" hacks) are not rendered
         // by browsers, so they are skipped entirely and must not reach the layout engine.
         var styleAttribute = element.GetAttribute("style");
@@ -84,14 +101,6 @@ public sealed partial class HtmlParser
                 // Count how many ListItem siblings are already in the parent (these are the previous siblings)
                 node.ListItemIndex = parentNode.Children.Count(c => c.Type == HtmlElementType.ListItem) + 1;
                 break;
-
-            case HtmlElementType.Bold or HtmlElementType.Italic:
-                node.Style ??= new HtmlStyle();
-                break;
-
-            case HtmlElementType.Underline:
-                node.Style ??= new HtmlStyle();
-                break;
         }
 
         switch (node.Type)
@@ -99,9 +108,8 @@ public sealed partial class HtmlParser
             case HtmlElementType.Bold: node.Style.FontWeightBold = true; break;
             case HtmlElementType.Italic: node.Style.FontStyleItalic = true; break;
             case HtmlElementType.Underline: node.Style.TextDecoration = TextDecoration.Underline; break;
-            case HtmlElementType.Center: 
-                node.Style ??= new HtmlStyle();
-                node.Style.TextAlign = TextAlignment.Center; 
+            case HtmlElementType.Center:
+                node.Style.TextAlign = TextAlignment.Center;
                 break;
         }
 
@@ -384,24 +392,20 @@ public sealed partial class HtmlParser
         var alignAttr = element.GetAttribute("align");
         if (!string.IsNullOrEmpty(alignAttr))
         {
-            var alignValue = alignAttr.ToLowerInvariant();
-            Imapster.HtmlViewer.Parsing.TextAlignment alignment = alignValue switch
+            var alignment = alignAttr.ToLowerInvariant() switch
             {
-                "left" => Imapster.HtmlViewer.Parsing.TextAlignment.Left,
-                "center" => Imapster.HtmlViewer.Parsing.TextAlignment.Center,
-                "right" => Imapster.HtmlViewer.Parsing.TextAlignment.Right,
-                "justify" => Imapster.HtmlViewer.Parsing.TextAlignment.Justify,
-                _ => Imapster.HtmlViewer.Parsing.TextAlignment.Left
+                "left" => TextAlignment.Left,
+                "center" => TextAlignment.Center,
+                "right" => TextAlignment.Right,
+                "justify" => TextAlignment.Justify,
+                _ => (TextAlignment?)null
             };
 
-            // Only apply align attribute if text-align is still at its default (Left)
-            // This prevents align from overriding explicit style attribute values
-            if (alignment != Imapster.HtmlViewer.Parsing.TextAlignment.Left || alignValue == "left")
+            // Unknown values are ignored, and align only applies while text-align is still
+            // at its default, so an explicit style attribute value is never overridden.
+            if (alignment is not null && style.TextAlign == TextAlignment.Left)
             {
-                if (style.TextAlign == Imapster.HtmlViewer.Parsing.TextAlignment.Left)
-                {
-                    style.TextAlign = alignment;
-                }
+                style.TextAlign = alignment.Value;
             }
         }
     }

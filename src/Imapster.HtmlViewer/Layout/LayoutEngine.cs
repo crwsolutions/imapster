@@ -91,6 +91,11 @@ public sealed class LayoutEngine
             typeface.Dispose();
         }
         _typefaceCache.Clear();
+
+        // SKTypeface.Default is shared and must stay alive; the parameterized constructor
+        // creates its own instance, and that one has to be released.
+        if (!ReferenceEquals(_defaultTypeface, SKTypeface.Default))
+            _defaultTypeface.Dispose();
     }
 
     /// <summary>
@@ -123,6 +128,38 @@ public sealed class LayoutEngine
     {
         var layoutNode = ConvertHtmlNode(htmlNode, null, availableWidth);
         return layoutNode;
+    }
+
+    /// <summary>
+    /// Gets whether this node has already been laid out for the given width. Layout propagates
+    /// the resolved content width while converting the tree, so a node normally reaches layout
+    /// exactly once; the guard keeps a containing block from laying out a subtree repeatedly,
+    /// which made layout cost grow with the nesting depth of the email tables.
+    /// </summary>
+    private static bool IsLaidOutAt(LayoutNode node, double availableWidth) =>
+        !double.IsNaN(node.LaidOutWidth) && Math.Abs(node.LaidOutWidth - availableWidth) < 0.01;
+
+    private static void MarkLaidOut(LayoutNode node, double availableWidth) =>
+        node.LaidOutWidth = availableWidth;
+
+    /// <summary>
+    /// Resolves the node's border-box width and the width its children lay out in. A fixed
+    /// width larger than the containing block is clamped to it, so nested fixed-width tables
+    /// (common in marketing emails) never overflow their parent cell.
+    /// </summary>
+    private static double ResolveInnerWidth(LayoutNode node, double availableWidth)
+    {
+        if (node.WidthSet && node.Width > availableWidth)
+            node.Width = availableWidth;
+
+        var contentWidth = node.WidthSet ? node.Width : availableWidth - node.MarginLeft - node.MarginRight;
+
+        // Calculate content width accounting for padding and borders
+        var innerWidth = contentWidth - node.PaddingLeft - node.PaddingRight - node.BorderLeftWidth - node.BorderRightWidth;
+
+        node.Width = contentWidth;
+        node.ContentWidth = innerWidth;
+        return innerWidth;
     }
 
     /// <summary>
@@ -189,10 +226,18 @@ public sealed class LayoutEngine
         // Apply default margins for block elements if not explicitly set
         ApplyDefaultMargins(layoutNode, htmlNode.Type, mergedStyle.FontSize);
 
+        // Convert children with the width they will actually be laid out in: their containing
+        // block's content width for block elements, the inherited width for inline content.
+        // Resolving it here (instead of letting the containing block relayout the subtree at
+        // this width afterwards) is what keeps every node to a single layout pass.
+        var childWidth = layoutNode.LayoutType == LayoutType.Block
+            ? ResolveInnerWidth(layoutNode, availableWidth)
+            : availableWidth;
+
         // Process children
         foreach (var child in htmlNode.Children)
         {
-            var childLayoutNode = ConvertHtmlNode(child, mergedStyle, availableWidth);
+            var childLayoutNode = ConvertHtmlNode(child, mergedStyle, childWidth);
             childLayoutNode.Parent = layoutNode;
             layoutNode.Children.Add(childLayoutNode);
         }
@@ -200,7 +245,10 @@ public sealed class LayoutEngine
         // Layout the node
         if (layoutNode.LayoutType == LayoutType.Block)
         {
-            LayoutBlockNode(layoutNode, availableWidth);
+            if (htmlNode.Type == HtmlElementType.TableRow)
+                LayoutTableRow(layoutNode, availableWidth);
+            else
+                LayoutBlockNode(layoutNode, availableWidth);
         }
         else if (layoutNode.LayoutType == LayoutType.Inline)
         {
@@ -371,23 +419,15 @@ public sealed class LayoutEngine
     /// </summary>
     private void LayoutBlockNode(LayoutNode node, double availableWidth)
     {
-        // This method may run several times for the same node (once per ancestor's
-        // ConvertHtmlNode pass); reset any previously computed line boxes so the latest
-        // pass wins instead of the runs accumulating.
+        // ConvertHtmlNode already laid out this node's children at the width this block
+        // resolves for them, so reaching the same width again must not repeat the work.
+        if (IsLaidOutAt(node, availableWidth))
+            return;
+
         node.LineBoxes.Clear();
 
-        // Clamp fixed widths to the containing block so nested fixed-width tables
-        // (common in marketing emails) never overflow their parent cell.
-        if (node.WidthSet && node.Width > availableWidth)
-            node.Width = availableWidth;
-
-        var contentWidth = node.WidthSet ? node.Width : availableWidth - node.MarginLeft - node.MarginRight;
-
-        // Calculate content width accounting for padding and borders
-        var innerWidth = contentWidth - node.PaddingLeft - node.PaddingRight - node.BorderLeftWidth - node.BorderRightWidth;
-
-        node.Width = contentWidth;
-        node.ContentWidth = innerWidth;
+        var innerWidth = ResolveInnerWidth(node, availableWidth);
+        var contentWidth = node.Width;
 
         // Lay out the children in document order. Block children are laid out as they are
         // encountered; consecutive inline children are grouped into runs so that inline
@@ -464,6 +504,8 @@ public sealed class LayoutEngine
         node.Height = totalHeight + node.PaddingTop + node.PaddingBottom;
         node.X = node.MarginLeft;
         node.Y = 0;
+
+        MarkLaidOut(node, availableWidth);
     }
 
     /// <summary>
@@ -500,6 +542,10 @@ public sealed class LayoutEngine
     /// </summary>
     private void LayoutTableRow(LayoutNode rowNode, double availableWidth)
     {
+        if (IsLaidOutAt(rowNode, availableWidth))
+            return;
+
+        var innerWidth = ResolveInnerWidth(rowNode, availableWidth);
         var cells = rowNode.Children.Where(c => c.LayoutType == LayoutType.Block).ToList();
         var cellCount = cells.Count;
         if (cellCount == 0)
@@ -572,7 +618,13 @@ public sealed class LayoutEngine
 
         // Row height is the maximum cell height (including any cell margins)
         rowNode.Width = availableWidth;
+        rowNode.ContentWidth = innerWidth;
+        rowNode.ContentHeight = maxCellHeight;
         rowNode.Height = maxCellHeight;
+        rowNode.X = rowNode.MarginLeft;
+        rowNode.Y = 0;
+
+        MarkLaidOut(rowNode, availableWidth);
     }
 
     /// <summary>
@@ -636,10 +688,14 @@ public sealed class LayoutEngine
         var hasNonEmptyContent = !string.IsNullOrEmpty(text) &&
             (text.Any(c => c == '\u00A0') || text.Any(c => c != ' ' && c != '\t' && c != '\r' && c != '\n'));
 
+        if (IsLaidOutAt(node, availableWidth))
+            return;
+
         if (!hasNonEmptyContent)
         {
             node.Height = 0;
             node.Width = 0;
+            MarkLaidOut(node, availableWidth);
             return;
         }
 
@@ -656,10 +712,15 @@ public sealed class LayoutEngine
 
         node.Height = totalHeight;
         node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
+
+        MarkLaidOut(node, availableWidth);
     }
 
     private void LayoutInlineNode(LayoutNode node, double availableWidth)
     {
+        if (IsLaidOutAt(node, availableWidth))
+            return;
+
         var lines = new List<LineBox>();
         var currentX = 0.0;
         var currentY = 0.0;
@@ -810,6 +871,8 @@ public sealed class LayoutEngine
         node.LineBoxes = lines;
         node.Height = lines.Count > 0 ? lines.Sum(l => l.Height) : 0;
         node.Width = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
+
+        MarkLaidOut(node, availableWidth);
     }
 
     /// <summary>

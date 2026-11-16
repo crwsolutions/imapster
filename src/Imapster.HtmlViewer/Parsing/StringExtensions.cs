@@ -14,29 +14,26 @@ public static partial class StringExtensions
 
         value = value.Trim();
 
-        if (value.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-        {
-            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : 0;
-        }
+        // 'rem' has to be tested before 'em': every rem value also ends with 'em', so
+        // matching 'em' first slices "1.5rem" into "1.5r" and silently drops the length.
+        if (TryParseWithUnit(value, "rem", out var rem)) return rem * 16;
+        if (TryParseWithUnit(value, "em", out var em)) return em * 16;
+        if (TryParseWithUnit(value, "pt", out var pt)) return pt * 1.333;
+        if (TryParseWithUnit(value, "px", out var px)) return px;
 
-        if (value.EndsWith("em", StringComparison.OrdinalIgnoreCase))
-        {
-            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 16 : 0;
-        }
-
-        if (value.EndsWith("rem", StringComparison.OrdinalIgnoreCase))
-        {
-            return double.TryParse(value[..^3], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 16 : 0;
-        }
-
-        if (value.EndsWith("pt", StringComparison.OrdinalIgnoreCase))
-        {
-            return double.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result * 1.333 : 0;
-        }
-
+        // A percentage resolves against a containing box the parser does not know; the
+        // layout engine handles those, so here it means "no explicit length".
         if (value.EndsWith("%", StringComparison.OrdinalIgnoreCase)) return 0;
 
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var plainResult) ? plainResult : 0;
+    }
+
+    private static bool TryParseWithUnit(string value, string unit, out double number)
+    {
+        number = 0;
+
+        return value.EndsWith(unit, StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(value[..^unit.Length], NumberStyles.Float, CultureInfo.InvariantCulture, out number);
     }
 
     public static string? ConvertColorToHex(this string color)
@@ -45,18 +42,25 @@ public static partial class StringExtensions
 
         color = color.Trim();
 
-        if (color.StartsWith("#")) return color;
+        if (color.StartsWith("#")) return NormalizeHex(color);
 
         var rgbMatch = ColorRegex().Match(color);
         if (rgbMatch.Success)
         {
-            var r = byte.Parse(rgbMatch.Groups[1].Value);
-            var g = byte.Parse(rgbMatch.Groups[2].Value);
-            var b = byte.Parse(rgbMatch.Groups[3].Value);
-            return $"#{r:X2}{g:X2}{b:X2}";
+            // Out-of-range components occur in real email CSS; byte.Parse would throw an
+            // OverflowException and abort parsing of the whole document.
+            if (byte.TryParse(rgbMatch.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var r)
+                && byte.TryParse(rgbMatch.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var g)
+                && byte.TryParse(rgbMatch.Groups[3].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var b))
+            {
+                return $"#{r:X2}{g:X2}{b:X2}";
+            }
+
+            return null;
         }
 
-        return color switch
+        // Legacy markup spells named colors in any case (<font color="RED">).
+        return color.ToLowerInvariant() switch
         {
             "black" => "#000000",
             "white" => "#FFFFFF",
@@ -77,5 +81,35 @@ public static partial class StringExtensions
             "orange" => "#FFA500",
             _ => null
         };
+    }
+
+    /// <summary>
+    /// Brings a hex color into the one shape the renderers understand: the 3-digit
+    /// shorthand (#f00) is expanded, 6- and 8-digit values are passed through unchanged,
+    /// and anything else counts as an unsupported color.
+    /// </summary>
+    internal static string? NormalizeHex(string value)
+    {
+        var hex = value[1..];
+
+        return hex.Length switch
+        {
+            3 => $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}",
+            6 or 8 when IsHexDigits(hex) => value,
+            _ => null
+        };
+    }
+
+    private static bool IsHexDigits(string value)
+    {
+        if (value.Length == 0) return false;
+
+        foreach (var c in value)
+        {
+            if (!char.IsAsciiHexDigit(c))
+                return false;
+        }
+
+        return true;
     }
 }

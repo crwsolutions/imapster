@@ -100,7 +100,7 @@ public class CenterElementTests
         Assert.NotNull(layoutRoot);
         Assert.Single(layoutRoot.Children);
         var centerLayoutNode = layoutRoot.Children[0];
-        Assert.Equal(HtmlElementType.Center, centerLayoutNode.HtmlNode.Type);
+        Assert.Equal(HtmlElementType.Center, centerLayoutNode.HtmlNode?.Type);
         Assert.True(centerLayoutNode.Children.Count > 0, "Center element should have child nodes");
         Assert.True(centerLayoutNode.Height > 0, "Center element should have non-zero height");
     }
@@ -126,12 +126,12 @@ public class CenterElementTests
         Assert.NotNull(layoutRoot);
         Assert.Single(layoutRoot.Children);
         var centerLayoutNode = layoutRoot.Children[0];
-        Assert.Equal(HtmlElementType.Center, centerLayoutNode.HtmlNode.Type);
+        Assert.Equal(HtmlElementType.Center, centerLayoutNode.HtmlNode?.Type);
 
         // Center's child should be the table
         Assert.NotEmpty(centerLayoutNode.Children);
         var tableNode = centerLayoutNode.Children[0];
-        Assert.Equal(HtmlElementType.Table, tableNode.HtmlNode.Type);
+        Assert.Equal(HtmlElementType.Table, tableNode.HtmlNode?.Type);
 
         // The table should be centered within the 800px width
         // With 200px width, it should be positioned around (800 - 200) / 2 = 300px from the left

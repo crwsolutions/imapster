@@ -20,11 +20,9 @@ public static class ColorExtensions
     /// </summary>
     public static SKColor ToSKColor(this Color color)
     {
-        return new SKColor(
-            (byte)(color.Red * 255),
-            (byte)(color.Green * 255),
-            (byte)(color.Blue * 255),
-            (byte)(color.Alpha * 255)
-        );
+        return new SKColor(ToByte(color.Red), ToByte(color.Green), ToByte(color.Blue), ToByte(color.Alpha));
     }
+
+    // Truncating instead of rounding loses a channel value, e.g. 0.5 -> 127 instead of 128.
+    private static byte ToByte(float component) => (byte)Math.Clamp((int)MathF.Round(component * 255f), 0, 255);
 }

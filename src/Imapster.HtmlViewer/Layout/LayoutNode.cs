@@ -251,6 +251,13 @@ public sealed class LayoutNode
     /// Gets or sets whether width is explicitly set.
     /// </summary>
     public bool WidthSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the width this node was last laid out at, or NaN when it has not been
+    /// laid out yet. A containing block that resolves the same width for the node skips the
+    /// layout pass instead of laying out the whole subtree a second time.
+    /// </summary>
+    internal double LaidOutWidth { get; set; } = double.NaN;
 }
 
 /// <summary>
