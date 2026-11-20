@@ -17,8 +17,12 @@ public partial class HtmlViewer : SKCanvasView
 
     private static void TraceLine(string message)
     {
-        Debug.WriteLine($"[LoadTrace] {message}");
-        Trace?.Invoke(message);
+        // The host sink (LoadTrace.Log) already mirrors to the debug output; writing
+        // directly as well made every line appear twice in the VS output window.
+        if (Trace is null)
+            Debug.WriteLine($"[LoadTrace] {message}");
+        else
+            Trace(message);
     }
 
     private readonly LayoutEngine _layoutEngine;
@@ -286,8 +290,16 @@ public partial class HtmlViewer : SKCanvasView
             TraceLine($"ParseAndLayout: layout(width={_lastRenderedWidth:F0}) {sw.ElapsedMilliseconds} ms");
         }
 
-        ApplyHeightRequest(GetDesiredHeight());
+        var heightSw = Stopwatch.StartNew();
+        var desiredHeight = GetDesiredHeight();
+        ApplyHeightRequest(desiredHeight);
+        heightSw.Stop();
+
+        var invalidateSw = Stopwatch.StartNew();
         InvalidateSurface();
+        invalidateSw.Stop();
+
+        TraceLine($"ParseAndLayout done: height {desiredHeight:F0} (applyHeight {heightSw.ElapsedMilliseconds} ms, invalidateSurface {invalidateSw.ElapsedMilliseconds} ms)");
     }
 
     /// <summary>

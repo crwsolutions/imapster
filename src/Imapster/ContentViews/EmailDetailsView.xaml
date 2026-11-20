@@ -64,7 +64,9 @@
                             <viewer:HtmlViewer Html="{Binding Source={x:Reference ThisView}, Path=Email.BodyHtml}" />
                         </Grid>
                     </ScrollView>
-                    <Editor  x:Name="RawContentGrid" IsVisible="False" IsReadOnly="True" Text="{Binding Source={x:Reference ThisView}, Path=Email.Body}" TextColor="{StaticResource Gray950}" />
+                    <ScrollView VerticalScrollBarVisibility="Always" VerticalOptions="Start">
+                        <Label x:Name="RawContentGrid" IsVisible="False"  TextColor="{StaticResource Gray950}" />
+                    </ScrollView>
                 </Grid>
             </Border>
 

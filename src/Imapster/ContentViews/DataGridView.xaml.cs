@@ -2,8 +2,10 @@ using CommunityToolkit.Maui.Core.Extensions;
 using CommunityToolkit.Maui.Extensions;
 using Imapster.ContentViews.Popups;
 using Imapster.Converters;
+using Imapster.Diagnostics;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Imapster.ContentViews
@@ -598,7 +600,9 @@ namespace Imapster.ContentViews
             }
 
             // Update SelectedItem for single-click selection
+            var selectionSw = Stopwatch.StartNew();
             SelectedItem = rowItem;
+            LoadTrace.Log($"row tap: SelectedItem assignment took {selectionSw.ElapsedMilliseconds} ms");
 
             if (IsCtrlPressed()) // Ctrl+klik: toggle selectie van deze rij
             {
