@@ -466,7 +466,7 @@ public sealed class LayoutEngine
                 var lines = BreakTextIntoLines(inlineContent.CombinedText, node, innerWidth, inlineRun);
 
                 // Distribute inline elements across lines based on text positions
-                LayoutInlineChildrenOnLines(inlineRun, lines, inlineContent, node);
+                LayoutInlineChildrenOnLines(inlineRun, lines, node);
 
                 // Render the run's lines at its document position
                 foreach (var line in lines)
@@ -1089,49 +1089,16 @@ public sealed class LayoutEngine
             }
             else if (child.LayoutType == LayoutType.Inline)
             {
-                // Collect text from inline element and track its position
+                // Collect text from inline element
                 var text = CollectTextFromNode(child);
-                var startChar = charIndex;
                 textBuilder.Append(text);
                 charIndex += text.Length;
-                content.Elements.Add((startChar, charIndex, child));
             }
         }
 
         content.CombinedText = textBuilder.ToString();
         content.HasContent = textBuilder.Length > 0;
         return content;
-    }
-
-    /// <summary>
-    /// Builds the absolute character ranges of the inline children within the combined text.
-    /// </summary>
-    private List<(int start, int end, LayoutNode child)> BuildChildRanges(List<LayoutNode> inlineChildren)
-    {
-        var ranges = new List<(int start, int end, LayoutNode child)>();
-        int charIndex = 0;
-
-        foreach (var child in inlineChildren)
-        {
-            if (child.HtmlNode?.Type == HtmlElementType.Text)
-            {
-                var text = child.HtmlNode.TextContent ?? string.Empty;
-                ranges.Add((charIndex, charIndex + text.Length, child));
-                charIndex += text.Length;
-            }
-            else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
-            {
-                charIndex += 1;
-            }
-            else if (child.LayoutType == LayoutType.Inline)
-            {
-                var text = CollectTextFromNode(child);
-                ranges.Add((charIndex, charIndex + text.Length, child));
-                charIndex += text.Length;
-            }
-        }
-
-        return ranges;
     }
 
     /// <summary>
@@ -1239,6 +1206,10 @@ public sealed class LayoutEngine
     /// Breaks text into lines based on available width.
     /// Line height/baseline are derived from font metrics of the spans on each line, so mixed
     /// font-size lines get a correct (larger) line height.
+    /// The running line width is carried forward as a cumulative estimate (word and space
+    /// widths) instead of re-measuring the whole line per word, and each finalized line is
+    /// measured exactly once - so the cost grows linearly with the text length rather than
+    /// with the square of the line length.
     /// </summary>
     private List<LineBox> BreakTextIntoLines(string text, LayoutNode node, double availableWidth, List<LayoutNode>? inlineChildren = null)
     {
@@ -1251,6 +1222,31 @@ public sealed class LayoutEngine
         var lineStartChar = 0;
         // The space width is constant for the node's font, so measure it once instead of per word.
         var spaceWidth = MeasureText(" ", node);
+
+        // Emits the accumulated line, measuring its full text exactly once for the LineBox width.
+        void EmitCurrentLine()
+        {
+            if (currentLineText.Length == 0)
+                return;
+
+            var lineText = currentLineText.ToString();
+            var line = new LineBox
+            {
+                Text = lineText,
+                X = 0,
+                Y = currentY,
+                Width = MeasureText(lineText, node),
+                StartCharIndex = lineStartChar,
+                EndCharIndex = charIndex
+            };
+            BuildLineStyleSpans(line, charSources);
+            lines.Add(line);
+
+            currentY += line.Height;
+            lineStartChar = charIndex;
+            currentLineText.Clear();
+            currentWidth = 0;
+        }
 
         // Handle newlines explicitly (from <br/> elements)
         var segments = text.Split('\n');
@@ -1268,33 +1264,16 @@ public sealed class LayoutEngine
 
                 if (totalWidth <= availableWidth && currentLineText.Length > 0)
                 {
-                    // Word fits on current line
+                    // Word fits on current line - carry the running estimate forward; the
+                    // line is measured once when it is emitted.
                     currentLineText.Append(" ").Append(word);
-                    currentWidth = MeasureText(currentLineText.ToString(), node);
+                    currentWidth = totalWidth;
                 }
                 else
                 {
-                    // Start new line if current line has content
-                    if (currentLineText.Length > 0)
-                    {
-                        var line = new LineBox
-                        {
-                            Text = currentLineText.ToString(),
-                            X = 0,
-                            Y = currentY,
-                            Width = currentWidth,
-                            StartCharIndex = lineStartChar,
-                            EndCharIndex = charIndex
-                        };
-                        BuildLineStyleSpans(line, charSources);
-                        lines.Add(line);
-
-                        currentY += line.Height;
-                        lineStartChar = charIndex;
-                    }
+                    EmitCurrentLine();
 
                     // Start new line with current word
-                    currentLineText.Clear();
                     currentLineText.Append(word);
                     currentWidth = wordWidth;
                 }
@@ -1303,25 +1282,9 @@ public sealed class LayoutEngine
             }
 
             // Handle end of segment (either end of text or newline)
-            if (currentLineText.Length > 0)
-            {
-                var line = new LineBox
-                {
-                    Text = currentLineText.ToString(),
-                    X = 0,
-                    Y = currentY,
-                    Width = currentWidth,
-                    StartCharIndex = lineStartChar,
-                    EndCharIndex = charIndex
-                };
-                BuildLineStyleSpans(line, charSources);
-                lines.Add(line);
-                currentY += line.Height;
-                lineStartChar = charIndex;
-                currentLineText.Clear();
-                currentWidth = 0;
-            }
-            else if (segmentIndex < segments.Length - 1)
+            var hadContent = currentLineText.Length > 0;
+            EmitCurrentLine();
+            if (!hadContent && segmentIndex < segments.Length - 1)
             {
                 // Empty segment (consecutive <br/>) - add empty line to reserve vertical space
                 var emptyLine = new LineBox
@@ -1347,14 +1310,19 @@ public sealed class LayoutEngine
 
     /// <summary>
     /// Layouts inline children across the broken lines, distributing them based on text position.
+    /// Each child's text, width and LineBox are computed once; only the per-line placement
+    /// (X/Y and the line height) varies, so a child spanning N lines costs one full-text
+    /// measurement instead of N.
     /// </summary>
-    private void LayoutInlineChildrenOnLines(List<LayoutNode> inlineChildren, List<LineBox> lines, InlineContent inlineContent, LayoutNode parentNode)
+    private void LayoutInlineChildrenOnLines(List<LayoutNode> inlineChildren, List<LineBox> lines, LayoutNode parentNode)
     {
         if (lines.Count == 0)
             return;
 
-        // Build a map of character ranges for each child
-        var childRanges = new List<(int start, int end, LayoutNode child)>();
+        // Build a map of character ranges for each child, with the child's text and width
+        // precomputed once (the old code re-measured each child's full text per line it
+        // spanned, which made layout quadratic for a single long text run).
+        var childRanges = new List<(int start, int end, LayoutNode child, string text, double textWidth, LineBox? lineBox)>();
         int charIndex = 0;
 
         foreach (var child in inlineChildren)
@@ -1362,7 +1330,10 @@ public sealed class LayoutEngine
             if (child.HtmlNode?.Type == HtmlElementType.Text)
             {
                 var text = child.HtmlNode.TextContent ?? string.Empty;
-                childRanges.Add((charIndex, charIndex + text.Length, child));
+                // Text children are rendered through the parent's line boxes (their layout
+                // type is None, so the renderer never reads their LineBoxes); only their
+                // text and width are needed for placement.
+                childRanges.Add((charIndex, charIndex + text.Length, child, text, MeasureText(text, parentNode), null));
                 charIndex += text.Length;
             }
             else if (child.HtmlNode?.Type == HtmlElementType.LineBreak)
@@ -1372,7 +1343,30 @@ public sealed class LayoutEngine
             else if (child.LayoutType == LayoutType.Inline)
             {
                 var text = CollectTextFromNode(child);
-                childRanges.Add((charIndex, charIndex + text.Length, child));
+                var textWidth = MeasureText(text, child);
+
+                // One LineBox per child, not one per overlapping line: the renderer only
+                // matches a child LineBox against a parent line when the child's full text
+                // is the entire line, so copies for the other lines of a multi-line child
+                // could never be found.
+                var lineBox = new LineBox
+                {
+                    Text = text,
+                    X = 0,
+                    Y = 0,
+                    Width = textWidth
+                };
+
+                // Style span pointing to the child (e.g. link) node
+                lineBox.StyleSpans.Add(new LineBox.InlineStyleSpan
+                {
+                    StartIndex = 0,
+                    Length = text.Length,
+                    SourceNode = child
+                });
+                AlignLineSpans(lineBox);
+
+                childRanges.Add((charIndex, charIndex + text.Length, child, text, textWidth, lineBox));
                 charIndex += text.Length;
             }
         }
@@ -1388,73 +1382,20 @@ public sealed class LayoutEngine
 
             double currentX = 0;
 
-            foreach (var (rangeStart, rangeEnd, child) in childRanges)
+            foreach (var (rangeStart, rangeEnd, child, _, textWidth, lineBox) in childRanges)
             {
                 if (rangeEnd <= lineStartChar || rangeStart >= lineEndChar)
                     continue;
 
-                if (child.HtmlNode?.Type == HtmlElementType.Text)
-                {
-                    var text = child.HtmlNode.TextContent ?? string.Empty;
-                    var textWidth = MeasureText(text, parentNode);
+                child.X = currentX;
+                child.Y = lineStartY;
+                child.Width = textWidth;
+                child.Height = line.Height;
 
-                    child.X = currentX;
-                    child.Y = lineStartY;
-                    child.Width = textWidth;
-                    child.Height = line.Height;
-
-                    var lineBox = new LineBox
-                    {
-                        Text = text,
-                        X = 0,
-                        Y = 0,
-                        Width = textWidth
-                    };
-
-                    // Add style span pointing to parent node for text
-                    lineBox.StyleSpans.Add(new LineBox.InlineStyleSpan
-                    {
-                        StartIndex = 0,
-                        Length = text.Length,
-                        SourceNode = parentNode
-                    });
-                    AlignLineSpans(lineBox);
-
+                if (lineBox is not null)
                     child.LineBoxes.Add(lineBox);
 
-                    currentX += textWidth;
-                }
-                else if (child.LayoutType == LayoutType.Inline)
-                {
-                    var text = CollectTextFromNode(child);
-                    var textWidth = MeasureText(text, child);
-
-                    child.X = currentX;
-                    child.Y = lineStartY;
-                    child.Width = textWidth;
-                    child.Height = line.Height;
-
-                    var lineBox = new LineBox
-                    {
-                        Text = text,
-                        X = 0,
-                        Y = 0,
-                        Width = textWidth
-                    };
-
-                    // Add style span pointing to the child (link) node
-                    lineBox.StyleSpans.Add(new LineBox.InlineStyleSpan
-                    {
-                        StartIndex = 0,
-                        Length = text.Length,
-                        SourceNode = child
-                    });
-                    AlignLineSpans(lineBox);
-
-                    child.LineBoxes.Add(lineBox);
-
-                    currentX += textWidth;
-                }
+                currentX += textWidth;
             }
         }
     }
@@ -1466,7 +1407,6 @@ public sealed class LayoutEngine
     {
         public string CombinedText { get; set; } = string.Empty;
         public bool HasContent { get; set; }
-        public List<(int start, int end, LayoutNode child)> Elements { get; } = new();
     }
 
     /// <summary>
