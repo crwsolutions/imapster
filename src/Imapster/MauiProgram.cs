@@ -6,6 +6,7 @@ using Microsoft.Extensions.AI;
 using OpenAI;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using System.ClientModel;
+using System.Text;
 
 namespace Imapster
 {
@@ -33,6 +34,11 @@ namespace Imapster
 
         public static MauiApp CreateMauiApp()
         {
+            // MailKit decodes MIME bodies through System.Text.Encoding. Register the code pages
+            // provider so legacy charsets (e.g. iso-2022-cn) resolve instead of throwing
+            // ArgumentException during sync.
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             //var endpoint = "http://localhost:11434/";
             var endpoint = "http://localhost:8080/";
             var modelId = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q5_K_XL";
