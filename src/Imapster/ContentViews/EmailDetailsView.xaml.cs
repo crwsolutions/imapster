@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using Imapster.Diagnostics;
+
 namespace Imapster.ContentViews;
 
 public partial class EmailDetailsView : ContentView
@@ -21,7 +24,11 @@ public partial class EmailDetailsView : ContentView
 
         if (newValue is EmailViewModel newEmail)
         {
+            LoadTrace.Log($"open email: '{newEmail.Subject}' (id {newEmail.Id}, body {newEmail.Body?.Length:N0} chars)");
+            var sw = Stopwatch.StartNew();
             newEmail.UpdateCanArchive();
+            sw.Stop();
+            LoadTrace.Log($"  UpdateCanArchive: {sw.ElapsedMilliseconds} ms");
         }
     }
 

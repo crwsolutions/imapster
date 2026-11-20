@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Imapster.Diagnostics;
 using Imapster.Repositories;
 using MailKit;
 using MailKit.Net.Imap;
@@ -61,6 +63,8 @@ public class ImapSyncService : IImapSyncService
         try
         {
             _logger.LogInformation("Refreshing emails for folder {FolderId}", folderId);
+            LoadTrace.Log($"sync: folder '{folderId}' start");
+            var syncSw = Stopwatch.StartNew();
 
             // Get the folder
             var folder = await _imapClient.GetFolderAsync(folderId, cancellationToken);
@@ -82,6 +86,8 @@ public class ImapSyncService : IImapSyncService
             if (newUniqueIds.Count > 0)
             {
                 _logger.LogInformation("Found {Count} new emails to sync", newUniqueIds.Count);
+                LoadTrace.Log($"sync: {newUniqueIds.Count:N0} new emails, fetching full messages one by one");
+                var fetchSw = Stopwatch.StartNew();
                 var newMessages = await folder.FetchAsync(newUniqueIds,
                     MessageSummaryItems.UniqueId |
                     MessageSummaryItems.Envelope |
@@ -89,11 +95,20 @@ public class ImapSyncService : IImapSyncService
                     MessageSummaryItems.Size |
                     MessageSummaryItems.BodyStructure,
                     cancellationToken);
+                fetchSw.Stop();
+                LoadTrace.Log($"sync: summary fetch {fetchSw.ElapsedMilliseconds} ms");
+
+                var loopSw = Stopwatch.StartNew();
                 foreach (var summary in newMessages)
                 {
+                    var messageSw = Stopwatch.StartNew();
                     var message = await folder.GetMessageAsync(summary.UniqueId, cancellationToken);
+                    messageSw.Stop();
                     await _emailRepository.AddEmailAsync(EmailViewModel.FromMessage(message, summary.UniqueId, folderId, _currentAccount.Id, summary.Size, summary.Flags));
+                    LoadTrace.Log($"sync: uid {summary.UniqueId.Id} '{message.Subject}' fetched {messageSw.ElapsedMilliseconds} ms ({summary.Size / 1024.0:N0} KB)");
                 }
+                loopSw.Stop();
+                LoadTrace.Log($"sync: message fetch+store loop {loopSw.ElapsedMilliseconds} ms for {newMessages.Count:N0} messages");
             }
 
             // 4. Detect deleted messages
@@ -126,6 +141,8 @@ public class ImapSyncService : IImapSyncService
                 }
             }
 
+            syncSw.Stop();
+            LoadTrace.Log($"sync: folder '{folderId}' done in {syncSw.ElapsedMilliseconds} ms");
             _logger.LogInformation("Successfully refreshed emails for folder {FolderId}", folderId);
         }
         catch (Exception ex)

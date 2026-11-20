@@ -9,6 +9,18 @@ namespace Imapster.HtmlViewer.Rendering;
 
 public partial class HtmlViewer : SKCanvasView
 {
+    /// <summary>
+    /// Optional diagnostic sink for phase timing lines (parse/layout/paint). The host app can
+    /// route these into a log file; the lines are always mirrored to the debug output as well.
+    /// </summary>
+    public static Action<string>? Trace { get; set; }
+
+    private static void TraceLine(string message)
+    {
+        Debug.WriteLine($"[LoadTrace] {message}");
+        Trace?.Invoke(message);
+    }
+
     private readonly LayoutEngine _layoutEngine;
     private readonly RenderContext _renderContext;
     private readonly HtmlParser _htmlParser;
@@ -42,6 +54,7 @@ public partial class HtmlViewer : SKCanvasView
     {
         if (bindable is HtmlViewer view && newValue is string html)
         {
+            TraceLine($"Html set ({html.Length:N0} chars), reusing parse: {view._parsedHtml == html}");
             view._renderContext.HtmlContent = html;
             view.ParseAndLayout();
         }
@@ -197,11 +210,15 @@ public partial class HtmlViewer : SKCanvasView
         {
             try
             {
+                var sw = Stopwatch.StartNew();
                 var htmlRoot = EnsureParsed();
-                if (htmlRoot is not null)
+                var layoutRoot = htmlRoot is null ? null : _layoutEngine.Layout(htmlRoot, (float)widthConstraint);
+                sw.Stop();
+                if (layoutRoot is not null)
                 {
-                    _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)widthConstraint);
+                    _layoutRoot = layoutRoot;
                     _lastRenderedWidth = widthConstraint;
+                    TraceLine($"measure(width={widthConstraint:F0}): parse+layout {sw.ElapsedMilliseconds} ms");
                 }
             }
             catch { }
@@ -245,8 +262,11 @@ public partial class HtmlViewer : SKCanvasView
         if (_htmlRoot is not null && _parsedHtml == html)
             return _htmlRoot;
 
+        var sw = Stopwatch.StartNew();
         _htmlRoot = _htmlParser.Parse(html);
+        sw.Stop();
         _parsedHtml = html;
+        TraceLine($"parse: {sw.ElapsedMilliseconds} ms for {html.Length:N0} chars");
         return _htmlRoot;
     }
 
@@ -260,7 +280,10 @@ public partial class HtmlViewer : SKCanvasView
         }
         else if (_lastRenderedWidth > 0)
         {
+            var sw = Stopwatch.StartNew();
             _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)_lastRenderedWidth);
+            sw.Stop();
+            TraceLine($"ParseAndLayout: layout(width={_lastRenderedWidth:F0}) {sw.ElapsedMilliseconds} ms");
         }
 
         ApplyHeightRequest(GetDesiredHeight());
@@ -306,19 +329,25 @@ public partial class HtmlViewer : SKCanvasView
         {
             try
             {
+                var sw = Stopwatch.StartNew();
                 var htmlRoot = EnsureParsed();
                 if (htmlRoot is not null)
                 {
                     _layoutRoot = _layoutEngine.Layout(htmlRoot, (float)currentWidth);
                     _lastRenderedWidth = currentWidth;
+                    sw.Stop();
+                    TraceLine($"paint(width={currentWidth:F0}): parse+layout {sw.ElapsedMilliseconds} ms");
                 }
             }
             catch { }
         }
 
         // Always render - either with existing layout or clear canvas
+        var renderSw = Stopwatch.StartNew();
         Render(e.Surface.Canvas);
-
+        renderSw.Stop();
+        if (renderSw.ElapsedMilliseconds > 50)
+            TraceLine($"paint: render {renderSw.ElapsedMilliseconds} ms");
     }
 
     private string GetTextFromHtmlNode(HtmlNode node, int start, int end)

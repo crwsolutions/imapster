@@ -1,7 +1,9 @@
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
+using System.Diagnostics;
 using Imapster.ContentViews;
+using Imapster.Diagnostics;
 using Imapster.Extensions;
 using Imapster.Popups;
 using Imapster.Repositories;
@@ -223,7 +225,11 @@ public partial class MainViewModel : BaseViewModel
         StatusText = $"Getting local emails of '{id}'";
 
         // Load emails from local storage in background thread
+        var sw = Stopwatch.StartNew();
         var emails = await _emailRepository.GetEmailsByFolderIdAsync(SelectedAccount.Id, id);
+        sw.Stop();
+        LoadTrace.Log($"folder '{id}': local DB read {sw.ElapsedMilliseconds} ms ({emails.Count:N0} emails, " +
+            $"{(emails.Count > 0 ? emails.Sum(e => e.Body?.Length ?? 0) / 1024.0 / 1024.0 : 0.0):N1} MB body text)");
         var uiEmails = new ObservableCollection<EmailViewModel>();
         foreach (var email in emails)
         {
@@ -235,6 +241,7 @@ public partial class MainViewModel : BaseViewModel
         //{
             Emails = uiEmails;
         //});
+        LoadTrace.Log($"folder '{id}': email list handed to UI");
 
         StatusText = $"Retrieved {emails.Count} emails";
 

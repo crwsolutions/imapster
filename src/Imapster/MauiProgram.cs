@@ -88,6 +88,12 @@ namespace Imapster
             builder.Services.AddTransientPopup<CancelAiPopup, CancelAiViewModel>();
 
             var app = builder.Build();
+
+#if DEBUG
+            // Route the HtmlViewer's phase-timing lines into the load-trace log file.
+            global::Imapster.HtmlViewer.Rendering.HtmlViewer.Trace = Diagnostics.LoadTrace.Log;
+#endif
+
             Database.Initialize();
             _ = CleanupTempDirectoryAsync();
             return app;
